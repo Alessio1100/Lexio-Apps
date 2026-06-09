@@ -2,7 +2,38 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import katex from "katex";
 import { CARDS, DECKS } from "../../lib/cards";
+
+function MathText({ text }) {
+  const segments = [];
+  const regex = /\$([^$]+)\$/g;
+  let lastIndex = 0;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      segments.push({ type: "text", content: text.slice(lastIndex, match.index) });
+    }
+    segments.push({ type: "math", content: match[1] });
+    lastIndex = regex.lastIndex;
+  }
+  if (lastIndex < text.length) {
+    segments.push({ type: "text", content: text.slice(lastIndex) });
+  }
+  return (
+    <>
+      {segments.map((seg, i) => {
+        if (seg.type === "math") {
+          const html = katex.renderToString(seg.content, { throwOnError: false, displayMode: false });
+          return <span key={i} dangerouslySetInnerHTML={{ __html: html }} />;
+        }
+        return seg.content.split("\n").map((line, j, arr) => (
+          <span key={`${i}-${j}`}>{line}{j < arr.length - 1 && <br />}</span>
+        ));
+      })}
+    </>
+  );
+}
 import {
   initState,
   pickNext,
@@ -179,7 +210,7 @@ export default function Page() {
               <div className="flashcard-inner">
                 <div className="face front">
                   <div className="facetag">DOMANDA</div>
-                  <div className="qtext">{card.q}</div>
+                  <div className="qtext"><MathText text={card.q} /></div>
                   <div className="hint">tocca per vedere la risposta</div>
                   {cardState && cardState.level === 1 && (
                     <div className="badge partial">la sai parzialmente</div>
@@ -190,7 +221,7 @@ export default function Page() {
                 </div>
                 <div className="face back">
                   <div className="facetag">RISPOSTA</div>
-                  <div className="atext">{card.a}</div>
+                  <div className="atext"><MathText text={card.a} /></div>
                 </div>
               </div>
             </div>
@@ -365,7 +396,6 @@ function Styles() {
         font-size: 16px;
         line-height: 1.62;
         color: #d7dbe8;
-        white-space: pre-wrap;
       }
       .hint {
         margin-top: 20px;
