@@ -46,11 +46,409 @@ button {
   border: none;
 }
 
+a {
+  color: inherit;
+}
+
 .wrap {
   max-width: 720px;
   margin: 0 auto;
-  padding: 20px 18px 40px;
+  padding: 20px 18px 96px; /* spazio per la bottom nav */
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
+}
+
+/* ---------- Intestazione pagina ---------- */
+.pagehead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+.pagetitle {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+.pagesub {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* ---------- Card ---------- */
+.card {
+  background: linear-gradient(160deg, var(--card-2), var(--card));
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: var(--shadow);
+}
+
+/* ---------- KPI ---------- */
+.kpigrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.kpi {
+  background: linear-gradient(160deg, var(--card-2), var(--card));
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px 16px;
+}
+.kpi .label {
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.kpi .value {
+  font-size: 22px;
+  font-weight: 750;
+  letter-spacing: -0.4px;
+  margin-top: 6px;
+}
+.kpi .sub {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+.kpi.big .value {
+  font-size: 30px;
+}
+.kpi.big {
+  grid-column: 1 / -1;
+}
+.pos {
+  color: var(--green);
+}
+.neg {
+  color: var(--red);
+}
+
+/* ---------- Chip / selettori ---------- */
+.chiprow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.chip {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  transition: 0.15s;
+}
+.chip.active {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: rgba(99, 102, 241, 0.5);
+  color: var(--indigo-soft);
+}
+
+/* ---------- Selettore periodo ---------- */
+.periodnav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 14px 0;
+}
+.periodnav .arrow {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 18px;
+  display: grid;
+  place-items: center;
+}
+.periodnav .plabel {
+  flex: 1;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+/* ---------- Bottoni ---------- */
+.btn {
+  padding: 13px 16px;
+  border-radius: 14px;
+  background: var(--indigo);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 650;
+  transition: 0.15s;
+}
+.btn:active {
+  transform: scale(0.98);
+}
+.btn.secondary {
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.btn.danger {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: var(--red);
+}
+.btn.block {
+  width: 100%;
+}
+.btn:disabled {
+  opacity: 0.55;
+}
+
+/* ---------- Input ---------- */
+.input,
+.select {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 15px;
+  font-family: inherit;
+}
+.input:focus,
+.select:focus {
+  outline: none;
+  border-color: var(--indigo);
+}
+.field {
+  margin-bottom: 14px;
+}
+.field label {
+  display: block;
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+/* ---------- Lista transazioni ---------- */
+.daygroup {
+  margin-top: 18px;
+}
+.dayhead {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+}
+.txrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-left-width: 4px;
+  margin-bottom: 8px;
+  width: 100%;
+  text-align: left;
+}
+.txrow:active {
+  transform: scale(0.99);
+}
+.txicon {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+}
+.txbody {
+  flex: 1;
+  min-width: 0;
+}
+.txname {
+  font-size: 14.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.txmeta {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.txamount {
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.bankdot {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+}
+
+/* ---------- Legenda / righe categoria ---------- */
+.legend {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.legrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+}
+.legdot {
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+  min-width: 12px;
+}
+.legname {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.legval {
+  font-weight: 650;
+}
+.legpct {
+  color: var(--muted);
+  font-size: 12px;
+  width: 44px;
+  text-align: right;
+}
+
+/* ---------- Bottom nav ---------- */
+.bottomnav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  justify-content: space-around;
+  padding: 8px 6px calc(8px + env(safe-area-inset-bottom));
+  background: rgba(22, 25, 34, 0.92);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border);
+}
+.navitem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  text-decoration: none;
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 4px 0;
+  border-radius: 10px;
+  transition: 0.15s;
+}
+.navitem .navicon {
+  font-size: 19px;
+  opacity: 0.7;
+}
+.navitem.active {
+  color: var(--indigo-soft);
+}
+.navitem.active .navicon {
+  opacity: 1;
+}
+
+/* ---------- Stato vuoto ---------- */
+.empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 40px 20px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ---------- Modale ---------- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.modal {
+  width: 100%;
+  max-width: 720px;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 22px 22px 0 0;
+  padding: 20px 18px calc(20px + env(safe-area-inset-bottom));
+  max-height: 85vh;
+  overflow-y: auto;
+}
+.modal h3 {
+  margin: 0 0 16px;
+  font-size: 18px;
+}
+
+/* ---------- Banner ---------- */
+.banner {
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  margin-bottom: 14px;
+}
+.banner.ok {
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  color: var(--green);
+}
+.banner.err {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: var(--red);
+}
+
+.spinner {
+  color: var(--muted);
+  text-align: center;
+  padding: 40px;
+}
+
+/* ---------- Barre di avanzamento ---------- */
+.track {
+  height: 8px;
+  background: var(--card);
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.fill {
+  height: 100%;
+  background: var(--indigo);
+  border-radius: 999px;
+  transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }

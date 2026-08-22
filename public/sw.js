@@ -1,6 +1,7 @@
-// Service worker minimale: cache-first per asset statici, offline-ready.
-const CACHE = "pmcsn-v1";
-const ASSETS = ["/", "/manifest.json", "/icon-192.png", "/icon-512.png"];
+// Service worker: solo asset statici in cache. MAI dati dinamici o API
+// (contengono informazioni finanziarie/autenticate).
+const CACHE = "spese-v1";
+const ASSETS = ["/manifest.json", "/icon-192.png", "/icon-512.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
@@ -18,17 +19,35 @@ self.addEventListener("activate", (e) => {
 
 self.addEventListener("fetch", (e) => {
   const { request } = e;
-  if (request.method !== "GET") return;
-  e.respondWith(
-    caches.match(request).then((cached) => {
-      const network = fetch(request)
-        .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(request, copy)).catch(() => {});
-          return res;
-        })
-        .catch(() => cached);
-      return cached || network;
-    })
-  );
+  const url = new URL(request.url);
+
+  // Non intercettare: metodi non-GET, richieste API, auth, cross-origin.
+  if (
+    request.method !== "GET" ||
+    url.origin !== self.location.origin ||
+    url.pathname.startsWith("/api") ||
+    url.pathname.startsWith("/auth") ||
+    url.pathname === "/login"
+  ) {
+    return;
+  }
+
+  // Asset statici Next → cache-first.
+  if (url.pathname.startsWith("/_next/static") || ASSETS.includes(url.pathname)) {
+    e.respondWith(
+      caches.match(request).then(
+        (cached) =>
+          cached ||
+          fetch(request).then((res) => {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(request, copy)).catch(() => {});
+            return res;
+          })
+      )
+    );
+    return;
+  }
+
+  // Navigazioni/pagine → network-first (fallback cache se offline).
+  e.respondWith(fetch(request).catch(() => caches.match(request)));
 });

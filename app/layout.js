@@ -1,9 +1,10 @@
 import "./globals.css";
-import "katex/dist/katex.min.css";
+import NavBar from "../components/NavBar";
+import SWRegister from "../components/SWRegister";
 
 export const metadata = {
-  title: "Lexio Apps",
-  description: "Hub personale di mini-app",
+  title: "Spese",
+  description: "Monitoraggio spese personali con OpenBanking",
   manifest: "/manifest.json",
 };
 
@@ -20,9 +21,16 @@ export default function RootLayout({ children }) {
       <head>
         <link rel="apple-touch-icon" href="/icon-192.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta
+          name="apple-mobile-web-app-status-bar-style"
+          content="black-translucent"
+        />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <NavBar />
+        <SWRegister />
+      </body>
     </html>
   );
 }
