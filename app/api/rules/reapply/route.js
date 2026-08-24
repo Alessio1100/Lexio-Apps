@@ -3,6 +3,7 @@ import { getUser } from "../../../../lib/auth";
 import { categorize } from "../../../../lib/categorize";
 import { counterpartyFromRaw } from "../../../../lib/enablebanking";
 import { detectTransferIds, ensureTransferCategory } from "../../../../lib/transfers";
+import { idsToMarkFixed } from "../../../../lib/fixed";
 
 // Ricalcola tutto sulle transazioni NON manuali:
 // 1) aggiorna la controparte (merchant) dal dato grezzo,
@@ -68,5 +69,22 @@ export async function POST() {
     })
   );
 
-  return NextResponse.json({ ok: true, updated, transfers: transferIds.size });
+  // propaga le spese fisse alle ricorrenze della stessa controparte
+  const { data: allTx } = await supabase
+    .from("transactions")
+    .select("id,merchant_name,is_fixed")
+    .eq("user_id", user.id);
+  const fixedIds = idsToMarkFixed(allTx || []);
+  await Promise.all(
+    fixedIds.map((id) =>
+      supabase.from("transactions").update({ is_fixed: true }).eq("id", id).eq("user_id", user.id)
+    )
+  );
+
+  return NextResponse.json({
+    ok: true,
+    updated,
+    transfers: transferIds.size,
+    fixed: fixedIds.length,
+  });
 }

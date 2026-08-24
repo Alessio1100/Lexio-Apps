@@ -136,6 +136,14 @@ export default function Dashboard() {
               <div className="label">🔢 Transazioni</div>
               <div className="value">{stats.count}</div>
             </div>
+            <div className="kpi">
+              <div className="label">📌 Spese fisse</div>
+              <div className="value">{formatMoney(stats.fixed, currency)}</div>
+              <div className="sub">
+                {stats.expenses ? Math.round((stats.fixed / stats.expenses) * 100) : 0}% delle
+                uscite
+              </div>
+            </div>
             {stats.progress.isCurrent && stats.projection > 0 && (
               <div className="kpi big">
                 <div className="label">🔮 Proiezione fine periodo</div>
@@ -259,6 +267,7 @@ function computeStats(txs, range, prevTotal) {
   const bankMap = new Map(); // banca -> net
   let income = 0;
   let count = 0;
+  let fixed = 0; // spese fisse (uscite marcate come ricorrenti)
 
   for (const t of txs) {
     const b = bucketOf(t);
@@ -268,6 +277,7 @@ function computeStats(txs, range, prevTotal) {
       if (Number(t.amount) > 0) income += Number(t.amount);
       continue;
     }
+    if (t.is_fixed && Number(t.amount) < 0) fixed += Math.abs(Number(t.amount));
     // categoria di spesa: accumula il netto (i rimborsi positivi scalano la spesa)
     const cat = t.categories;
     const key = cat?.id || "none";
@@ -315,6 +325,7 @@ function computeStats(txs, range, prevTotal) {
     expenses,
     income,
     net,
+    fixed,
     pie,
     topCategory,
     byBank,

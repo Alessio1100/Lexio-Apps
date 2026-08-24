@@ -7,8 +7,21 @@ import {
 } from "../../../lib/enablebanking";
 import { categorize } from "../../../lib/categorize";
 import { detectTransferIds, ensureTransferCategory } from "../../../lib/transfers";
+import { idsToMarkFixed } from "../../../lib/fixed";
 
 export const maxDuration = 60;
+
+// Propaga il flag "spesa fissa" alle transazioni della stessa controparte.
+async function markFixed(admin, userId) {
+  const { data: txs } = await admin
+    .from("transactions")
+    .select("id,merchant_name,is_fixed")
+    .eq("user_id", userId);
+  const ids = idsToMarkFixed(txs || []);
+  for (const id of ids) {
+    await admin.from("transactions").update({ is_fixed: true }).eq("id", id);
+  }
+}
 
 // Marca i giroconti interni (uscita/entrata di pari importo tra conti diversi)
 // con la categoria "Trasferimenti", così restano esclusi dai conteggi.
@@ -116,6 +129,13 @@ async function syncUser(admin, userId) {
     await markTransfers(admin, userId);
   } catch (e) {
     errors.push({ step: "transfers", message: e.message });
+  }
+
+  // propaga le spese fisse alle ricorrenze della stessa controparte
+  try {
+    await markFixed(admin, userId);
+  } catch (e) {
+    errors.push({ step: "fixed", message: e.message });
   }
 
   return { inserted, errors };

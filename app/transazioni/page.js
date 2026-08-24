@@ -79,6 +79,26 @@ export default function TransazioniPage() {
     }
   }
 
+  async function toggleFixed() {
+    if (!editing) return;
+    const next = !editing.is_fixed;
+    try {
+      await api.patch(`/api/transactions/${editing.id}`, { is_fixed: next });
+      const merchant = (editing.merchant_name || "").toLowerCase().trim();
+      setTxs((prev) =>
+        prev.map((t) => {
+          const same = merchant
+            ? (t.merchant_name || "").toLowerCase().trim() === merchant
+            : t.id === editing.id;
+          return same ? { ...t, is_fixed: next } : t;
+        })
+      );
+      setEditing((e) => (e ? { ...e, is_fixed: next } : e));
+    } catch (e) {
+      alert(e.message);
+    }
+  }
+
   return (
     <div className="wrap">
       <header className="pagehead">
@@ -168,6 +188,7 @@ export default function TransazioniPage() {
           currency={currency}
           onClose={() => setEditing(null)}
           onAssign={assign}
+          onToggleFixed={toggleFixed}
         />
       )}
     </div>
@@ -193,6 +214,7 @@ function TxRow({ tx, currency, onClick }) {
       </span>
       <span className="txbody">
         <span className="txname">
+          {tx.is_fixed && <span title="Spesa fissa">📌 </span>}
           {tx.merchant_name || tx.description || "Transazione"}
         </span>
         <span className="txmeta">
@@ -211,7 +233,7 @@ function TxRow({ tx, currency, onClick }) {
   );
 }
 
-function CategoryModal({ tx, categories, currency, onClose, onAssign }) {
+function CategoryModal({ tx, categories, currency, onClose, onAssign, onToggleFixed }) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -222,6 +244,20 @@ function CategoryModal({ tx, categories, currency, onClose, onAssign }) {
             {formatMoney(Number(tx.amount), currency)}
           </div>
         </div>
+
+        <button
+          className={`btn ${tx.is_fixed ? "" : "secondary"} block`}
+          style={{ marginBottom: 14 }}
+          onClick={onToggleFixed}
+        >
+          📌 {tx.is_fixed ? "Spesa fissa attiva — tocca per togliere" : "Segna come spesa fissa"}
+        </button>
+        {tx.is_fixed && (
+          <div style={{ fontSize: 11.5, color: "var(--muted)", margin: "-8px 0 12px" }}>
+            Tutte le transazioni di «{tx.merchant_name || "questa controparte"}» sono trattate come
+            spese fisse, anche quelle future.
+          </div>
+        )}
         <div
           style={{
             display: "grid",

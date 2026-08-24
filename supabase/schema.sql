@@ -63,6 +63,7 @@ create table if not exists public.transactions (
   merchant_name     text,
   creditor_name     text,
   is_foreign        boolean not null default false,
+  is_fixed          boolean not null default false,
   category_id       uuid references public.categories(id) on delete set null,
   category_source   text not null default 'none', -- none | rule | manual
   rule_id           uuid references public.rules(id) on delete set null,
@@ -71,6 +72,7 @@ create table if not exists public.transactions (
   unique (user_id, gc_transaction_id)
 );
 alter table public.transactions add column if not exists is_foreign boolean not null default false;
+alter table public.transactions add column if not exists is_fixed boolean not null default false;
 
 create index if not exists tx_user_date_idx on public.transactions (user_id, booking_date desc);
 create index if not exists tx_category_idx  on public.transactions (category_id);
