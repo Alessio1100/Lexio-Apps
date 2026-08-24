@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getUser } from "../../../lib/auth";
+import { deriveMerchant } from "../../../lib/enablebanking";
 
 // GET /api/transactions?from=YYYY-MM-DD&to=YYYY-MM-DD&category=&connection=&q=
 export async function GET(request) {
@@ -31,5 +32,16 @@ export async function GET(request) {
 
   const { data, error } = await query.limit(2000);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  return NextResponse.json(data);
+
+  // Nome "indicativo" calcolato al volo (vale anche per le spese passate),
+  // e rimozione del pesante campo raw dal payload.
+  const rows = (data || []).map((r) => {
+    const { raw, ...rest } = r;
+    return {
+      ...rest,
+      display_name:
+        deriveMerchant(raw, r.description) || r.merchant_name || r.description || "",
+    };
+  });
+  return NextResponse.json(rows);
 }

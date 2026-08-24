@@ -215,7 +215,7 @@ function TxRow({ tx, currency, onClick }) {
       <span className="txbody">
         <span className="txname">
           {tx.is_fixed && <span title="Spesa fissa">📌 </span>}
-          {tx.merchant_name || tx.description || "Transazione"}
+          {tx.display_name || tx.merchant_name || tx.description || "Transazione"}
         </span>
         <span className="txmeta">
           <span>{cat?.name || "Non categorizzata"}</span>
@@ -239,7 +239,7 @@ function CategoryModal({ tx, categories, currency, onClose, onAssign, onToggleFi
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <h3>Categorizza</h3>
         <div style={{ marginBottom: 14, color: "var(--muted)", fontSize: 13 }}>
-          {tx.merchant_name || tx.description}
+          {tx.display_name || tx.merchant_name || tx.description}
           <div style={{ color: "var(--text)", fontWeight: 700, marginTop: 4 }}>
             {formatMoney(Number(tx.amount), currency)}
           </div>
