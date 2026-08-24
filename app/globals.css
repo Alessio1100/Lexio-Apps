@@ -44,6 +44,7 @@ button {
   font-family: inherit;
   cursor: pointer;
   border: none;
+  color: inherit; /* i bottoni ereditano il colore del testo (evita testo nero) */
 }
 
 a {

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getUser } from "../../../../lib/auth";
 import { categorize } from "../../../../lib/categorize";
-import { counterpartyFromRaw } from "../../../../lib/enablebanking";
+import { deriveMerchant } from "../../../../lib/enablebanking";
 import { detectTransferIds, ensureTransferCategory } from "../../../../lib/transfers";
 import { idsToMarkFixed } from "../../../../lib/fixed";
 
@@ -30,7 +30,9 @@ export async function POST() {
 
   // 1) + 2): ricalcolo controparte e categoria per ogni transazione
   const working = (txs || []).map((tx) => {
-    const merchant = tx.raw ? counterpartyFromRaw(tx.raw) || tx.merchant_name : tx.merchant_name;
+    const merchant = tx.raw
+      ? deriveMerchant(tx.raw, tx.description) || tx.merchant_name
+      : tx.merchant_name;
     const enriched = { ...tx, merchant_name: merchant, institution_name: bankById[tx.connection_id] };
     const { category_id, rule_id } = categorize(enriched, rules || []);
     return {
