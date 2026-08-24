@@ -92,6 +92,33 @@ export default function ImpostazioniPage() {
     setClassifying(true);
     setMsg(null);
     setClassifyResults([]);
+
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const delayMs = (s) => {
+      const m = String(s || "").match(/([\d.]+)\s*s/);
+      return m ? Math.ceil(parseFloat(m[1]) * 1000) : 20000;
+    };
+    const setStatus = (ids, patch) =>
+      setClassifyResults((prev) => {
+        const set = new Set(ids);
+        return prev.map((x) => (set.has(x.id) ? { ...x, ...patch } : x));
+      });
+    const applyResults = (results) =>
+      setClassifyResults((prev) => {
+        const byId = new Map((results || []).map((r) => [r.id, r]));
+        return prev.map((x) => {
+          const r = byId.get(x.id);
+          if (!r) return x;
+          return {
+            ...x,
+            status: r.category ? "done" : "uncertain",
+            category: r.category,
+            source: r.source,
+            error: undefined,
+          };
+        });
+      });
+
     try {
       const pending = await api.get("/api/classify/pending");
       const list = pending.transactions || [];
@@ -99,30 +126,44 @@ export default function ImpostazioniPage() {
         setMsg({ type: "ok", text: "Nessuna transazione da classificare." });
         return;
       }
-      // mostra subito tutte in stato "in corso", poi le processo una alla volta
       setClassifyResults(list.map((t) => ({ ...t, status: "pending" })));
-      for (const t of list) {
-        try {
-          const r = await api.post("/api/classify/one", { id: t.id });
-          const status = r.error
-            ? "error"
-            : r.skipped
-            ? "skipped"
-            : r.category
-            ? "done"
-            : "uncertain";
-          setClassifyResults((prev) =>
-            prev.map((x) =>
-              x.id === t.id
-                ? { ...x, status, category: r.category, source: r.source, error: r.error }
-                : x
-            )
-          );
-        } catch (e) {
-          setClassifyResults((prev) =>
-            prev.map((x) => (x.id === t.id ? { ...x, status: "error", error: e.message } : x))
-          );
+
+      const CHUNK = 20; // ~20 transazioni per richiesta → poche richieste totali
+      for (let i = 0; i < list.length; i += CHUNK) {
+        const ids = list.slice(i, i + CHUNK).map((t) => t.id);
+        let attempts = 0;
+        let done = false;
+        while (attempts < 5 && !done) {
+          attempts++;
+          let r;
+          try {
+            r = await api.post("/api/classify/batch", { ids });
+          } catch (e) {
+            if (attempts >= 5) setStatus(ids, { status: "error", error: e.message });
+            else await sleep(15000);
+            continue;
+          }
+          if (r.results?.length) applyResults(r.results);
+          if (r.error) {
+            const stuck = r.pendingIds || ids;
+            const rateLimited = r.status === 429 || r.retryDelay;
+            if (rateLimited && attempts < 5) {
+              const wait = delayMs(r.retryDelay);
+              setStatus(stuck, {
+                status: "waiting",
+                error: `limite raggiunto, riprovo tra ${Math.round(wait / 1000)}s…`,
+              });
+              await sleep(wait);
+            } else {
+              setStatus(stuck, { status: "error", error: r.error });
+              done = true;
+            }
+          } else {
+            done = true;
+          }
         }
+        // ritmo tra i lotti per non sforare l'RPM
+        if (i + CHUNK < list.length) await sleep(4000);
       }
     } catch (e) {
       setMsg({ type: "err", text: e.message });
@@ -227,8 +268,13 @@ export default function ImpostazioniPage() {
           <div style={{ marginTop: 16 }}>
             <div className="dayhead" style={{ marginBottom: 8 }}>
               <span>
-                Richieste a Gemini · {classifyResults.filter((r) => r.status !== "pending").length}/
-                {classifyResults.length}
+                Richieste a Gemini ·{" "}
+                {
+                  classifyResults.filter(
+                    (r) => r.status !== "pending" && r.status !== "waiting"
+                  ).length
+                }
+                /{classifyResults.length}
               </span>
               <span style={{ textTransform: "none", fontWeight: 500 }}>
                 {classifyResults.filter((r) => r.status === "error").length} errori
@@ -237,7 +283,7 @@ export default function ImpostazioniPage() {
             <div style={{ maxHeight: 340, overflowY: "auto" }}>
               {classifyResults.map((r, i) => {
                 const icon =
-                  r.status === "pending"
+                  r.status === "pending" || r.status === "waiting"
                     ? "⏳"
                     : r.status === "error"
                     ? "❌"
@@ -278,6 +324,10 @@ export default function ImpostazioniPage() {
                     </span>
                     {r.status === "error" ? (
                       <span style={{ color: "var(--red)", fontSize: 12, flexShrink: 0, maxWidth: "45%", textAlign: "right" }}>
+                        {r.error}
+                      </span>
+                    ) : r.status === "waiting" ? (
+                      <span style={{ color: "var(--amber)", fontSize: 12, flexShrink: 0, maxWidth: "50%", textAlign: "right" }}>
                         {r.error}
                       </span>
                     ) : r.status === "pending" ? (

@@ -18,12 +18,13 @@ export default function TransazioniPage() {
   const [fConn, setFConn] = useState("");
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState(null);
+  const [adding, setAdding] = useState(false);
 
   useEffect(() => {
     Promise.all([
       api.get("/api/settings").catch(() => ({ month_start_day: 1, currency: "EUR" })),
       api.get("/api/categories").catch(() => []),
-      api.get("/api/gocardless/connections").catch(() => []),
+      api.get("/api/enablebanking/connections").catch(() => []),
     ]).then(([s, c, conn]) => {
       setSettings(s);
       if (s?.default_period) setPeriod(s.default_period);
@@ -99,6 +100,23 @@ export default function TransazioniPage() {
     }
   }
 
+  async function addExpense(form) {
+    try {
+      await api.post("/api/transactions", {
+        amount: form.amount,
+        is_expense: form.is_expense,
+        name: form.name,
+        category_id: form.category_id || null,
+        date: form.date,
+        currency,
+      });
+      setAdding(false);
+      reload();
+    } catch (e) {
+      alert(e.message);
+    }
+  }
+
   return (
     <div className="wrap">
       <header className="pagehead">
@@ -106,6 +124,9 @@ export default function TransazioniPage() {
           <div className="pagetitle">Spese</div>
           <div className="pagesub">Tutte le transazioni</div>
         </div>
+        <button className="btn" onClick={() => setAdding(true)}>
+          + Aggiungi
+        </button>
       </header>
 
       <PeriodBar
@@ -191,6 +212,111 @@ export default function TransazioniPage() {
           onToggleFixed={toggleFixed}
         />
       )}
+
+      {adding && (
+        <AddExpenseModal
+          categories={categories}
+          onClose={() => setAdding(false)}
+          onSave={addExpense}
+        />
+      )}
+    </div>
+  );
+}
+
+function AddExpenseModal({ categories, onClose, onSave }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const [form, setForm] = useState({
+    amount: "",
+    is_expense: true,
+    name: "",
+    category_id: "",
+    date: today,
+  });
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  const cats = categories.filter((c) => (form.is_expense ? !c.is_income : c.is_income));
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <h3>Aggiungi spesa (contanti)</h3>
+
+        <div className="field">
+          <label>Tipo</label>
+          <div className="chiprow">
+            <button
+              className={`chip ${form.is_expense ? "active" : ""}`}
+              onClick={() => set("is_expense", true)}
+            >
+              Uscita
+            </button>
+            <button
+              className={`chip ${!form.is_expense ? "active" : ""}`}
+              onClick={() => set("is_expense", false)}
+            >
+              Entrata
+            </button>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <div className="field" style={{ flex: 1 }}>
+            <label>Importo (€)</label>
+            <input
+              className="input"
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              value={form.amount}
+              onChange={(e) => set("amount", e.target.value)}
+              placeholder="0,00"
+            />
+          </div>
+          <div className="field" style={{ flex: 1 }}>
+            <label>Data</label>
+            <input
+              className="input"
+              type="date"
+              value={form.date}
+              onChange={(e) => set("date", e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="field">
+          <label>Descrizione</label>
+          <input
+            className="input"
+            value={form.name}
+            onChange={(e) => set("name", e.target.value)}
+            placeholder="Es. Caffè al bar"
+          />
+        </div>
+
+        <div className="field">
+          <label>Categoria</label>
+          <select
+            className="select"
+            value={form.category_id}
+            onChange={(e) => set("category_id", e.target.value)}
+          >
+            <option value="">— nessuna —</option>
+            {cats.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.icon} {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <button
+          className="btn block"
+          disabled={!Number(form.amount)}
+          onClick={() => onSave(form)}
+        >
+          Aggiungi
+        </button>
+      </div>
     </div>
   );
 }
@@ -219,9 +345,13 @@ function TxRow({ tx, currency, onClick }) {
         </span>
         <span className="txmeta">
           <span>{cat?.name || "Non categorizzata"}</span>
-          {bank && (
+          {bank ? (
             <span className="bankdot" style={{ color: "var(--muted)" }}>
               {shortBank(bank)}
+            </span>
+          ) : (
+            <span className="bankdot" style={{ color: "var(--muted)" }}>
+              💵 Contanti
             </span>
           )}
         </span>

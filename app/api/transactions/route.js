@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "crypto";
 import { getUser } from "../../../lib/auth";
 import { deriveMerchant } from "../../../lib/enablebanking";
 
@@ -44,4 +45,41 @@ export async function GET(request) {
     };
   });
   return NextResponse.json(rows);
+}
+
+// POST: aggiunge una spesa manuale (es. contanti).
+// { amount, is_expense, name, category_id, date }
+export async function POST(request) {
+  const { supabase, user } = await getUser();
+  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  const body = await request.json();
+  const value = Math.abs(Number(body.amount) || 0);
+  if (!value) return NextResponse.json({ error: "importo non valido" }, { status: 400 });
+  const isExpense = body.is_expense !== false; // default: spesa
+  const signed = isExpense ? -value : value;
+  const date = body.date || new Date().toISOString().slice(0, 10);
+  const name = (body.name || "").trim() || "Spesa in contanti";
+
+  const { data, error } = await supabase
+    .from("transactions")
+    .insert({
+      user_id: user.id,
+      connection_id: null, // manuale/contanti: nessuna banca
+      gc_transaction_id: `manual_${randomUUID()}`,
+      booking_date: date,
+      value_date: date,
+      amount: signed,
+      currency: body.currency || "EUR",
+      description: name,
+      merchant_name: name,
+      is_foreign: false,
+      category_id: body.category_id || null,
+      category_source: body.category_id ? "manual" : "none",
+    })
+    .select("*, categories(id,name,color,icon,is_income,bucket)")
+    .single();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  return NextResponse.json(data);
 }
