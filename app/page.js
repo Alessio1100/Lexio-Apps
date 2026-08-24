@@ -49,7 +49,7 @@ export default function Dashboard() {
     ])
       .then(([cur, prev]) => {
         setTxs(cur || []);
-        setPrevTotal(sumExpenses(prev || []));
+        setPrevTotal(netExpenses(prev || []));
       })
       .catch(() => {
         setTxs([]);
@@ -228,59 +228,88 @@ export default function Dashboard() {
   );
 }
 
-function sumExpenses(txs) {
-  return txs
-    .filter((t) => Number(t.amount) < 0)
-    .reduce((a, t) => a + Math.abs(Number(t.amount)), 0);
+const EXPENSE_BUCKETS = new Set(["needs", "wants", "savings", "utility"]);
+
+// Bucket di una transazione; se non categorizzata: uscita→utility, entrata→income.
+function bucketOf(t) {
+  const b = t.categories?.bucket;
+  if (b) return b;
+  return Number(t.amount) < 0 ? "utility" : "income";
+}
+
+// Spesa NETTA: per ogni categoria di spesa somma gli importi con segno
+// (i rimborsi positivi riducono la spesa) e azzera i negativi; esclude i
+// trasferimenti interni e le entrate.
+function netExpenses(txs) {
+  const perCat = new Map();
+  for (const t of txs) {
+    const b = bucketOf(t);
+    if (b === "transfer" || b === "income") continue;
+    const key = t.categories?.id || "none";
+    perCat.set(key, (perCat.get(key) || 0) + Number(t.amount));
+  }
+  let total = 0;
+  for (const net of perCat.values()) total += Math.max(0, -net);
+  return total;
 }
 
 function computeStats(txs, range, prevTotal) {
-  const expenses = sumExpenses(txs);
-  const income = txs
-    .filter((t) => Number(t.amount) > 0)
-    .reduce((a, t) => a + Number(t.amount), 0);
-  const net = income - expenses;
+  const catMap = new Map(); // id -> { name, color, icon, net }
+  const bucketNet = { needs: 0, wants: 0, savings: 0, utility: 0 };
+  const bankMap = new Map(); // banca -> net
+  let income = 0;
+  let count = 0;
 
-  // raggruppa spese per categoria
-  const catMap = new Map();
   for (const t of txs) {
-    if (Number(t.amount) >= 0) continue;
+    const b = bucketOf(t);
+    if (b === "transfer") continue; // giroconti interni: esclusi
+    count++;
+    if (b === "income") {
+      if (Number(t.amount) > 0) income += Number(t.amount);
+      continue;
+    }
+    // categoria di spesa: accumula il netto (i rimborsi positivi scalano la spesa)
     const cat = t.categories;
     const key = cat?.id || "none";
-    const name = cat?.name || "Non categorizzata";
-    const color = cat?.color || "#71717a";
-    const icon = cat?.icon || "";
-    const cur = catMap.get(key) || { name, color, icon, value: 0 };
-    cur.value += Math.abs(Number(t.amount));
+    const cur =
+      catMap.get(key) || {
+        name: cat?.name || "Non categorizzata",
+        color: cat?.color || "#71717a",
+        icon: cat?.icon || "",
+        net: 0,
+      };
+    cur.net += Number(t.amount);
     catMap.set(key, cur);
+    const bk = EXPENSE_BUCKETS.has(b) ? b : "utility";
+    bucketNet[bk] += Number(t.amount);
+    const bank = t.bank_connections?.institution_name || "Altro";
+    bankMap.set(bank, (bankMap.get(bank) || 0) + Number(t.amount));
   }
-  const pie = [...catMap.values()].sort((a, b) => b.value - a.value);
+
+  const pie = [...catMap.values()]
+    .map((c) => ({ name: c.name, color: c.color, icon: c.icon, value: Math.max(0, -c.net) }))
+    .filter((c) => c.value > 0.005)
+    .sort((a, b) => b.value - a.value);
+  const expenses = pie.reduce((a, c) => a + c.value, 0);
   const topCategory = pie[0] || null;
 
-  // raggruppa spese per banca
-  const bankMap = new Map();
-  for (const t of txs) {
-    if (Number(t.amount) >= 0) continue;
-    const name = t.bank_connections?.institution_name || "Altro";
-    bankMap.set(name, (bankMap.get(name) || 0) + Math.abs(Number(t.amount)));
-  }
   const byBank = [...bankMap.entries()]
-    .map(([name, value]) => ({ name, value }))
+    .map(([name, net]) => ({ name, value: Math.max(0, -net) }))
+    .filter((b) => b.value > 0.005)
     .sort((a, b) => b.value - a.value);
 
-  // ripartizione 50/30/20 (le non categorizzate finiscono in "utility")
-  const buckets = { needs: 0, wants: 0, savings: 0, utility: 0 };
-  for (const t of txs) {
-    if (Number(t.amount) >= 0) continue;
-    const b = t.categories?.bucket;
-    const key = b && buckets[b] != null ? b : "utility";
-    buckets[key] += Math.abs(Number(t.amount));
-  }
+  const buckets = {
+    needs: Math.max(0, -bucketNet.needs),
+    wants: Math.max(0, -bucketNet.wants),
+    savings: Math.max(0, -bucketNet.savings),
+    utility: Math.max(0, -bucketNet.utility),
+  };
 
   const progress = periodProgress(range);
   const perDay = expenses / progress.elapsed;
   const projection = progress.isCurrent ? perDay * progress.total : 0;
   const deltaPct = prevTotal > 0 ? ((expenses - prevTotal) / prevTotal) * 100 : 0;
+  const net = income - expenses;
 
   return {
     expenses,
@@ -290,7 +319,7 @@ function computeStats(txs, range, prevTotal) {
     topCategory,
     byBank,
     buckets,
-    count: txs.length,
+    count,
     progress,
     perDay,
     projection,

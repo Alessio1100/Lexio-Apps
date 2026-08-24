@@ -22,6 +22,7 @@ const BUCKETS = [
   { value: "wants", label: "Desideri", hint: "stile di vita · obiettivo ≈30%" },
   { value: "savings", label: "Risparmio", hint: "accantonamenti · obiettivo ≈20%" },
   { value: "utility", label: "Utility", hint: "prelievi, commissioni, altro" },
+  { value: "transfer", label: "Trasferimenti", hint: "giroconti · esclusi dai conteggi" },
 ];
 
 export default function CategoriePage() {

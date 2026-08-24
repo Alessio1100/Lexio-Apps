@@ -271,7 +271,9 @@ function groupByDay(txs) {
     if (!map.has(d)) map.set(d, { date: d, items: [], spent: 0 });
     const g = map.get(d);
     g.items.push(t);
-    if (Number(t.amount) < 0) g.spent += Math.abs(Number(t.amount));
+    // i giroconti interni non contano nel totale speso del giorno
+    if (t.categories?.bucket !== "transfer" && Number(t.amount) < 0)
+      g.spent += Math.abs(Number(t.amount));
   }
   return [...map.values()].sort((a, b) => (a.date < b.date ? 1 : -1));
 }

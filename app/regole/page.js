@@ -5,10 +5,11 @@ import { api } from "../../lib/api";
 
 const FIELDS = [
   { value: "description", label: "Descrizione" },
-  { value: "merchant", label: "Beneficiario" },
+  { value: "merchant", label: "Controparte" },
   { value: "bank", label: "Banca" },
   { value: "amount", label: "Importo" },
   { value: "foreign", label: "Estero" },
+  { value: "direction", label: "Direzione" },
 ];
 const TEXT_OPS = [
   { value: "contains", label: "contiene" },
@@ -22,16 +23,19 @@ const AMOUNT_OPS = [
   { value: "equals", label: "uguale a" },
 ];
 const FOREIGN_OPS = [{ value: "equals", label: "è" }];
+const DIRECTION_OPS = [{ value: "equals", label: "è" }];
 
 function opsFor(field) {
   if (field === "amount") return AMOUNT_OPS;
   if (field === "foreign") return FOREIGN_OPS;
+  if (field === "direction") return DIRECTION_OPS;
   return TEXT_OPS;
 }
 
 function defaultClauseFor(field) {
   if (field === "amount") return { field, op: "gt", value: "" };
   if (field === "foreign") return { field, op: "equals", value: true };
+  if (field === "direction") return { field, op: "equals", value: "in" };
   return { field, op: "contains", value: "" };
 }
 
@@ -310,6 +314,16 @@ function RuleForm({ initial, cats, onClose, onSave }) {
                 >
                   <option value="true">Sì</option>
                   <option value="false">No</option>
+                </select>
+              ) : c.field === "direction" ? (
+                <select
+                  className="select"
+                  style={{ flex: 1 }}
+                  value={c.value === "out" ? "out" : "in"}
+                  onChange={(e) => setClause(i, { value: e.target.value })}
+                >
+                  <option value="in">Entrata</option>
+                  <option value="out">Uscita</option>
                 </select>
               ) : (
                 <input

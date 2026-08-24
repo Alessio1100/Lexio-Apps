@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 import { getUser } from "../../../../lib/auth";
 import { categorize } from "../../../../lib/categorize";
+import { counterpartyFromRaw } from "../../../../lib/enablebanking";
+import { detectTransferIds, ensureTransferCategory } from "../../../../lib/transfers";
 
-// Ricalcola la categoria di TUTTE le transazioni non "manual" applicando le regole.
+// Ricalcola tutto sulle transazioni NON manuali:
+// 1) aggiorna la controparte (merchant) dal dato grezzo,
+// 2) riapplica le regole,
+// 3) marca i giroconti interni come "Trasferimenti".
 export async function POST() {
   const { supabase, user } = await getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -20,26 +25,48 @@ export async function POST() {
   const bankById = Object.fromEntries(
     (connections || []).map((c) => [c.id, c.institution_name])
   );
+  const transferCatId = await ensureTransferCategory(supabase, user.id);
+
+  // 1) + 2): ricalcolo controparte e categoria per ogni transazione
+  const working = (txs || []).map((tx) => {
+    const merchant = tx.raw ? counterpartyFromRaw(tx.raw) || tx.merchant_name : tx.merchant_name;
+    const enriched = { ...tx, merchant_name: merchant, institution_name: bankById[tx.connection_id] };
+    const { category_id, rule_id } = categorize(enriched, rules || []);
+    return {
+      ...tx,
+      merchant_name: merchant,
+      category_id,
+      rule_id,
+      category_source: category_id ? "rule" : "none",
+    };
+  });
+
+  // 3): i giroconti interni vincono sulle regole
+  const transferIds = detectTransferIds(working);
+  for (const t of working) {
+    if (transferIds.has(t.id)) {
+      t.category_id = transferCatId;
+      t.rule_id = null;
+      t.category_source = "transfer";
+    }
+  }
 
   let updated = 0;
-  const jobs = (txs || []).map(async (tx) => {
-    const enriched = { ...tx, institution_name: bankById[tx.connection_id] };
-    const { category_id, rule_id } = categorize(enriched, rules || []);
-    const source = category_id ? "rule" : "none";
-    if (
-      tx.category_id !== category_id ||
-      tx.rule_id !== rule_id ||
-      tx.category_source !== source
-    ) {
+  await Promise.all(
+    working.map(async (t) => {
       await supabase
         .from("transactions")
-        .update({ category_id, rule_id, category_source: source })
-        .eq("id", tx.id)
+        .update({
+          merchant_name: t.merchant_name,
+          category_id: t.category_id,
+          rule_id: t.rule_id,
+          category_source: t.category_source,
+        })
+        .eq("id", t.id)
         .eq("user_id", user.id);
       updated++;
-    }
-  });
-  await Promise.all(jobs);
+    })
+  );
 
-  return NextResponse.json({ ok: true, updated });
+  return NextResponse.json({ ok: true, updated, transfers: transferIds.size });
 }
