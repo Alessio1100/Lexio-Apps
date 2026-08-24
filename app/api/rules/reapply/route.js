@@ -15,11 +15,13 @@ export async function POST() {
 
   const [{ data: rules }, { data: txs }, { data: connections }] = await Promise.all([
     supabase.from("rules").select("*").eq("user_id", user.id),
+    // rielabora solo le auto-assegnate dalle regole o non categorizzate:
+    // preserva manuali, memoria (memory), AI (ai) e trasferimenti
     supabase
       .from("transactions")
       .select("*")
       .eq("user_id", user.id)
-      .neq("category_source", "manual"),
+      .in("category_source", ["none", "rule"]),
     supabase.from("bank_connections").select("id,institution_name").eq("user_id", user.id),
   ]);
 

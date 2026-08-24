@@ -12,6 +12,7 @@ export default function ImpostazioniPage() {
   const [connections, setConnections] = useState([]);
   const [msg, setMsg] = useState(null);
   const [syncing, setSyncing] = useState(false);
+  const [classifying, setClassifying] = useState(false);
   const [picker, setPicker] = useState(null); // lista istituzioni
   const [pickerLoading, setPickerLoading] = useState(false);
 
@@ -82,6 +83,26 @@ export default function ImpostazioniPage() {
       setMsg({ type: "err", text: e.message });
     } finally {
       setSyncing(false);
+    }
+  }
+
+  async function classify() {
+    setClassifying(true);
+    setMsg(null);
+    try {
+      const r = await api.post("/api/classify");
+      const parts = [];
+      if (r.memory) parts.push(`${r.memory} da memoria`);
+      if (r.ai) parts.push(`${r.ai} con AI`);
+      let text = parts.length
+        ? `Classificate ${parts.join(" + ")}. Ancora senza categoria: ${r.remaining}.`
+        : `Nessuna nuova classificazione. Senza categoria: ${r.remaining}.`;
+      if (r.aiError) text += ` (AI non disponibile: ${r.aiError})`;
+      setMsg({ type: r.aiError ? "err" : "ok", text });
+    } catch (e) {
+      setMsg({ type: "err", text: e.message });
+    } finally {
+      setClassifying(false);
     }
   }
 
@@ -163,6 +184,19 @@ export default function ImpostazioniPage() {
             </button>
           )}
         </div>
+      </div>
+
+      {/* ---- Classificazione automatica ---- */}
+      <div className="card" style={{ marginTop: 14 }}>
+        <div style={{ fontWeight: 700, marginBottom: 6 }}>✨ Classificazione automatica</div>
+        <div style={{ fontSize: 12.5, color: "var(--muted)", marginBottom: 12 }}>
+          Categorizza le spese ancora senza categoria: prima con quanto hai già corretto
+          a mano (memoria), poi con l'AI (Gemini) per gli esercenti nuovi. Più correggi,
+          meglio impara.
+        </div>
+        <button className="btn block" onClick={classify} disabled={classifying}>
+          {classifying ? "Classifico…" : "✨ Classifica spese non categorizzate"}
+        </button>
       </div>
 
       {/* ---- Soglia mese ---- */}

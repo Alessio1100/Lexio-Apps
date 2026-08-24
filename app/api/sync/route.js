@@ -8,8 +8,25 @@ import {
 import { categorize } from "../../../lib/categorize";
 import { detectTransferIds, ensureTransferCategory } from "../../../lib/transfers";
 import { idsToMarkFixed } from "../../../lib/fixed";
+import { learnedAssignments } from "../../../lib/learn";
 
 export const maxDuration = 60;
+
+// Applica la memoria per esercente (categorie imparate dalle correzioni manuali)
+// alle transazioni non ancora categorizzate.
+async function markLearned(admin, userId) {
+  const { data: txs } = await admin
+    .from("transactions")
+    .select("id,merchant_name,category_id,category_source")
+    .eq("user_id", userId);
+  const assignments = learnedAssignments(txs || []);
+  for (const a of assignments) {
+    await admin
+      .from("transactions")
+      .update({ category_id: a.category_id, category_source: "memory", rule_id: null })
+      .eq("id", a.id);
+  }
+}
 
 // Propaga il flag "spesa fissa" alle transazioni della stessa controparte.
 async function markFixed(admin, userId) {
@@ -136,6 +153,13 @@ async function syncUser(admin, userId) {
     await markFixed(admin, userId);
   } catch (e) {
     errors.push({ step: "fixed", message: e.message });
+  }
+
+  // applica la memoria per esercente (categorie imparate a mano)
+  try {
+    await markLearned(admin, userId);
+  } catch (e) {
+    errors.push({ step: "learned", message: e.message });
   }
 
   return { inserted, errors };
