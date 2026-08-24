@@ -2,23 +2,28 @@ import { NextResponse } from "next/server";
 import { getUser } from "../../../lib/auth";
 import { learnedAssignments } from "../../../lib/learn";
 import { normMerchant } from "../../../lib/fixed";
-import { classifyWithGemini } from "../../../lib/gemini";
+import { classifyWithGemini, summarizeRules } from "../../../lib/gemini";
 
 export const maxDuration = 60;
 
 // Classifica le transazioni non categorizzate:
 // 1) memoria per esercente (dalle correzioni manuali) — gratis, locale
-// 2) Gemini per gli esercenti ancora sconosciuti, con esempi dallo storico
+// 2) Gemini per gli esercenti ancora sconosciuti, partendo dalle più recenti,
+//    usando regole + tipo categoria + contesto (estero/valuta/banca).
 export async function POST() {
   const { supabase, user } = await getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const [{ data: categories }, { data: txs }] = await Promise.all([
-    supabase.from("categories").select("id,name").eq("user_id", user.id),
+  const [{ data: categories }, { data: rules }, { data: txs }] = await Promise.all([
+    supabase.from("categories").select("id,name,is_income,bucket").eq("user_id", user.id),
+    supabase.from("rules").select("*").eq("user_id", user.id),
     supabase
       .from("transactions")
-      .select("id,merchant_name,description,amount,category_id,category_source")
-      .eq("user_id", user.id),
+      .select(
+        "id,merchant_name,description,amount,currency,is_foreign,category_id,category_source,booking_date,bank_connections(institution_name)"
+      )
+      .eq("user_id", user.id)
+      .order("booking_date", { ascending: false }), // dalla più recente
   ]);
 
   const all = txs || [];
@@ -36,16 +41,15 @@ export async function POST() {
     )
   );
 
-  // 2) Gemini per il resto ancora senza categoria
+  // 2) Gemini per il resto ancora senza categoria (già ordinato per data desc)
   const remaining = all.filter((t) => !t.category_id && !memoryById.has(t.id));
 
   let aiCount = 0;
   let aiError = null;
   if (remaining.length && process.env.GEMINI_API_KEY) {
-    const catByName = new Map(
-      (categories || []).map((c) => [c.name.toLowerCase().trim(), c.id])
-    );
-    const nameById = new Map((categories || []).map((c) => [c.id, c.name]));
+    const catByName = new Map((categories || []).map((c) => [c.name.toLowerCase().trim(), c.id]));
+    const nameById = Object.fromEntries((categories || []).map((c) => [c.id, c.name]));
+    const rulesText = summarizeRules(rules, nameById);
 
     // esempi = come l'utente ha classificato a mano (dedup per controparte)
     const seen = new Set();
@@ -55,7 +59,7 @@ export async function POST() {
         const k = normMerchant(t);
         if (k && !seen.has(k)) {
           seen.add(k);
-          examples.push({ merchant: t.merchant_name || "", category: nameById.get(t.category_id) || "" });
+          examples.push({ merchant: t.merchant_name || "", category: nameById[t.category_id] || "" });
         }
       }
       if (examples.length >= 40) break;
@@ -67,11 +71,15 @@ export async function POST() {
         merchant: t.merchant_name,
         description: t.description,
         amount: t.amount,
+        currency: t.currency,
+        foreign: t.is_foreign,
+        bank: t.bank_connections?.institution_name || "",
       }));
       const results = await classifyWithGemini({
         transactions: batch,
-        categoryNames: (categories || []).map((c) => c.name),
+        categories: categories || [],
         examples,
+        rulesText,
       });
       await Promise.all(
         results.map(async (r) => {
