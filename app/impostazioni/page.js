@@ -93,16 +93,37 @@ export default function ImpostazioniPage() {
     setMsg(null);
     setClassifyResults([]);
     try {
-      const r = await api.post("/api/classify");
-      setClassifyResults(r.results || []);
-      const parts = [];
-      if (r.memory) parts.push(`${r.memory} da memoria`);
-      if (r.ai) parts.push(`${r.ai} con AI`);
-      let text = parts.length
-        ? `Classificate ${parts.join(" + ")}. Ancora senza categoria: ${r.remaining}.`
-        : `Nessuna nuova classificazione. Senza categoria: ${r.remaining}.`;
-      if (r.aiError) text += ` (AI non disponibile: ${r.aiError})`;
-      setMsg({ type: r.aiError ? "err" : "ok", text });
+      const pending = await api.get("/api/classify/pending");
+      const list = pending.transactions || [];
+      if (!list.length) {
+        setMsg({ type: "ok", text: "Nessuna transazione da classificare." });
+        return;
+      }
+      // mostra subito tutte in stato "in corso", poi le processo una alla volta
+      setClassifyResults(list.map((t) => ({ ...t, status: "pending" })));
+      for (const t of list) {
+        try {
+          const r = await api.post("/api/classify/one", { id: t.id });
+          const status = r.error
+            ? "error"
+            : r.skipped
+            ? "skipped"
+            : r.category
+            ? "done"
+            : "uncertain";
+          setClassifyResults((prev) =>
+            prev.map((x) =>
+              x.id === t.id
+                ? { ...x, status, category: r.category, source: r.source, error: r.error }
+                : x
+            )
+          );
+        } catch (e) {
+          setClassifyResults((prev) =>
+            prev.map((x) => (x.id === t.id ? { ...x, status: "error", error: e.message } : x))
+          );
+        }
+      }
     } catch (e) {
       setMsg({ type: "err", text: e.message });
     } finally {
@@ -205,56 +226,88 @@ export default function ImpostazioniPage() {
         {classifyResults.length > 0 && (
           <div style={{ marginTop: 16 }}>
             <div className="dayhead" style={{ marginBottom: 8 }}>
-              <span>Classificazioni ({classifyResults.length})</span>
+              <span>
+                Richieste a Gemini · {classifyResults.filter((r) => r.status !== "pending").length}/
+                {classifyResults.length}
+              </span>
               <span style={{ textTransform: "none", fontWeight: 500 }}>
-                🧠 memoria · ✨ AI
+                {classifyResults.filter((r) => r.status === "error").length} errori
               </span>
             </div>
-            <div style={{ maxHeight: 320, overflowY: "auto" }}>
-              {classifyResults.map((r, i) => (
-                <div
-                  key={i}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "8px 0",
-                    borderBottom: "1px solid var(--border)",
-                    fontSize: 13,
-                  }}
-                >
-                  <span>{r.source === "ai" ? "✨" : "🧠"}</span>
-                  <span
+            <div style={{ maxHeight: 340, overflowY: "auto" }}>
+              {classifyResults.map((r, i) => {
+                const icon =
+                  r.status === "pending"
+                    ? "⏳"
+                    : r.status === "error"
+                    ? "❌"
+                    : r.status === "skipped"
+                    ? "➖"
+                    : r.status === "uncertain"
+                    ? "❔"
+                    : r.source === "ai"
+                    ? "✨"
+                    : "🧠";
+                return (
+                  <div
+                    key={i}
                     style={{
-                      flex: 1,
-                      minWidth: 0,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "8px 0",
+                      borderBottom: "1px solid var(--border)",
+                      fontSize: 13,
+                      opacity: r.status === "pending" ? 0.6 : 1,
                     }}
                   >
-                    {r.name}
-                    <span style={{ color: "var(--muted)", marginLeft: 6 }}>
-                      {formatDateShort(r.date)}
+                    <span>{icon}</span>
+                    <span
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {r.name}
+                      <span style={{ color: "var(--muted)", marginLeft: 6 }}>
+                        {formatDateShort(r.date)}
+                      </span>
                     </span>
-                  </span>
-                  <span
-                    className="bankdot"
-                    style={{ color: "var(--indigo-soft)", borderColor: "var(--border)" }}
-                  >
-                    {r.category}
-                  </span>
-                  <span
-                    style={{
-                      width: 66,
-                      textAlign: "right",
-                      color: Number(r.amount) >= 0 ? "var(--green)" : "var(--text)",
-                    }}
-                  >
-                    {formatMoney(r.amount, settings.currency)}
-                  </span>
-                </div>
-              ))}
+                    {r.status === "error" ? (
+                      <span style={{ color: "var(--red)", fontSize: 12, flexShrink: 0, maxWidth: "45%", textAlign: "right" }}>
+                        {r.error}
+                      </span>
+                    ) : r.status === "pending" ? (
+                      <span style={{ color: "var(--muted)" }}>in corso…</span>
+                    ) : r.status === "uncertain" ? (
+                      <span style={{ color: "var(--amber)" }}>incerta</span>
+                    ) : r.status === "skipped" ? (
+                      <span style={{ color: "var(--muted)" }}>già fatta</span>
+                    ) : (
+                      <>
+                        <span
+                          className="bankdot"
+                          style={{ color: "var(--indigo-soft)", borderColor: "var(--border)" }}
+                        >
+                          {r.category}
+                        </span>
+                        <span
+                          style={{
+                            width: 66,
+                            textAlign: "right",
+                            color: Number(r.amount) >= 0 ? "var(--green)" : "var(--text)",
+                          }}
+                        >
+                          {formatMoney(r.amount, settings.currency)}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
