@@ -3,12 +3,16 @@ import { getUser } from "../../../lib/auth";
 import { learnedAssignments } from "../../../lib/learn";
 import { normMerchant } from "../../../lib/fixed";
 import { classifyWithGemini, summarizeRules } from "../../../lib/gemini";
+import { deriveMerchant } from "../../../lib/enablebanking";
 
 export const maxDuration = 60;
 
+const displayName = (t) =>
+  deriveMerchant(t.raw, t.description) || t.merchant_name || (t.description || "").slice(0, 40);
+
 // Classifica le transazioni non categorizzate:
 // 1) memoria per esercente (dalle correzioni manuali) — gratis, locale
-// 2) Gemini per gli esercenti ancora sconosciuti, partendo dalle più recenti,
+// 2) Gemini per gli esercenti ancora sconosciuti, dalle più recenti,
 //    usando regole + tipo categoria + contesto (estero/valuta/banca).
 export async function POST() {
   const { supabase, user } = await getUser();
@@ -20,13 +24,15 @@ export async function POST() {
     supabase
       .from("transactions")
       .select(
-        "id,merchant_name,description,amount,currency,is_foreign,category_id,category_source,booking_date,bank_connections(institution_name)"
+        "id,merchant_name,description,amount,currency,is_foreign,category_id,category_source,booking_date,raw,bank_connections(institution_name)"
       )
       .eq("user_id", user.id)
       .order("booking_date", { ascending: false }), // dalla più recente
   ]);
 
   const all = txs || [];
+  const byId = new Map(all.map((t) => [t.id, t]));
+  const nameById = Object.fromEntries((categories || []).map((c) => [c.id, c.name]));
 
   // 1) memoria per esercente
   const assignments = learnedAssignments(all);
@@ -40,15 +46,23 @@ export async function POST() {
         .eq("user_id", user.id)
     )
   );
+  const results = assignments.map((a) => {
+    const t = byId.get(a.id);
+    return {
+      name: displayName(t),
+      amount: t.amount,
+      date: t.booking_date,
+      category: nameById[a.category_id] || "?",
+      source: "memory",
+    };
+  });
 
   // 2) Gemini per il resto ancora senza categoria (già ordinato per data desc)
   const remaining = all.filter((t) => !t.category_id && !memoryById.has(t.id));
 
-  let aiCount = 0;
   let aiError = null;
   if (remaining.length && process.env.GEMINI_API_KEY) {
     const catByName = new Map((categories || []).map((c) => [c.name.toLowerCase().trim(), c.id]));
-    const nameById = Object.fromEntries((categories || []).map((c) => [c.id, c.name]));
     const rulesText = summarizeRules(rules, nameById);
 
     // esempi = come l'utente ha classificato a mano (dedup per controparte)
@@ -69,20 +83,20 @@ export async function POST() {
       const batch = remaining.slice(0, 200).map((t) => ({
         id: t.id,
         merchant: t.merchant_name,
-        description: t.description,
+        description: t.description, // testo originale grezzo (fonte principale)
         amount: t.amount,
         currency: t.currency,
         foreign: t.is_foreign,
         bank: t.bank_connections?.institution_name || "",
       }));
-      const results = await classifyWithGemini({
+      const aiResults = await classifyWithGemini({
         transactions: batch,
         categories: categories || [],
         examples,
         rulesText,
       });
       await Promise.all(
-        results.map(async (r) => {
+        aiResults.map(async (r) => {
           const catId = catByName.get((r.category || "").toLowerCase().trim());
           if (!catId) return;
           await supabase
@@ -90,7 +104,15 @@ export async function POST() {
             .update({ category_id: catId, category_source: "ai", rule_id: null })
             .eq("id", r.id)
             .eq("user_id", user.id);
-          aiCount++;
+          const t = byId.get(r.id);
+          if (t)
+            results.push({
+              name: displayName(t),
+              amount: t.amount,
+              date: t.booking_date,
+              category: nameById[catId],
+              source: "ai",
+            });
         })
       );
     } catch (e) {
@@ -98,11 +120,13 @@ export async function POST() {
     }
   }
 
+  const aiCount = results.filter((r) => r.source === "ai").length;
   return NextResponse.json({
     ok: true,
     memory: assignments.length,
     ai: aiCount,
     remaining: remaining.length - aiCount,
     aiError,
+    results,
   });
 }

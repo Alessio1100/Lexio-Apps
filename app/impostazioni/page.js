@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { api } from "../../lib/api";
 import { createClient } from "../../lib/supabase/client";
 import { PERIODS, PERIOD_LABELS } from "../../lib/periods";
+import { formatMoney, formatDateShort } from "../../lib/format";
 
 export default function ImpostazioniPage() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export default function ImpostazioniPage() {
   const [msg, setMsg] = useState(null);
   const [syncing, setSyncing] = useState(false);
   const [classifying, setClassifying] = useState(false);
+  const [classifyResults, setClassifyResults] = useState([]);
   const [picker, setPicker] = useState(null); // lista istituzioni
   const [pickerLoading, setPickerLoading] = useState(false);
 
@@ -89,8 +91,10 @@ export default function ImpostazioniPage() {
   async function classify() {
     setClassifying(true);
     setMsg(null);
+    setClassifyResults([]);
     try {
       const r = await api.post("/api/classify");
+      setClassifyResults(r.results || []);
       const parts = [];
       if (r.memory) parts.push(`${r.memory} da memoria`);
       if (r.ai) parts.push(`${r.ai} con AI`);
@@ -197,6 +201,63 @@ export default function ImpostazioniPage() {
         <button className="btn block" onClick={classify} disabled={classifying}>
           {classifying ? "Classifico…" : "✨ Classifica spese non categorizzate"}
         </button>
+
+        {classifyResults.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            <div className="dayhead" style={{ marginBottom: 8 }}>
+              <span>Classificazioni ({classifyResults.length})</span>
+              <span style={{ textTransform: "none", fontWeight: 500 }}>
+                🧠 memoria · ✨ AI
+              </span>
+            </div>
+            <div style={{ maxHeight: 320, overflowY: "auto" }}>
+              {classifyResults.map((r, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "8px 0",
+                    borderBottom: "1px solid var(--border)",
+                    fontSize: 13,
+                  }}
+                >
+                  <span>{r.source === "ai" ? "✨" : "🧠"}</span>
+                  <span
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {r.name}
+                    <span style={{ color: "var(--muted)", marginLeft: 6 }}>
+                      {formatDateShort(r.date)}
+                    </span>
+                  </span>
+                  <span
+                    className="bankdot"
+                    style={{ color: "var(--indigo-soft)", borderColor: "var(--border)" }}
+                  >
+                    {r.category}
+                  </span>
+                  <span
+                    style={{
+                      width: 66,
+                      textAlign: "right",
+                      color: Number(r.amount) >= 0 ? "var(--green)" : "var(--text)",
+                    }}
+                  >
+                    {formatMoney(r.amount, settings.currency)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ---- Soglia mese ---- */}
