@@ -33,7 +33,7 @@ export async function POST(request) {
       supabase
         .from("transactions")
         .select(
-          "id,merchant_name,description,amount,currency,is_foreign,category_id,booking_date,raw,bank_connections(institution_name)"
+          "id,merchant_name,description,amount,currency,is_foreign,category_id,value_date,raw,bank_connections(institution_name)"
         )
         .eq("user_id", user.id)
         .in("id", ids),
@@ -55,7 +55,7 @@ export async function POST(request) {
         .update({ category_id: catId, category_source: "memory", rule_id: null })
         .eq("id", t.id)
         .eq("user_id", user.id);
-      results.push({ id: t.id, name: displayName(t), amount: t.amount, date: t.booking_date, category: nameById[catId], source: "memory" });
+      results.push({ id: t.id, name: displayName(t), amount: t.amount, date: t.value_date, category: nameById[catId], source: "memory" });
     } else {
       pending.push(t);
     }
@@ -93,7 +93,7 @@ export async function POST(request) {
       for (const t of pending) {
         const catName = aiById.get(t.id) || "";
         const catId = catByName.get(catName.toLowerCase().trim());
-        const row = { id: t.id, name: displayName(t), amount: t.amount, date: t.booking_date };
+        const row = { id: t.id, name: displayName(t), amount: t.amount, date: t.value_date };
         if (catId) {
           await supabase
             .from("transactions")

@@ -10,10 +10,10 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from("transactions")
-    .select("id,merchant_name,description,amount,booking_date,raw")
+    .select("id,merchant_name,description,amount,value_date,raw")
     .eq("user_id", user.id)
     .is("category_id", null)
-    .order("booking_date", { ascending: false });
+    .order("value_date", { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
@@ -21,7 +21,7 @@ export async function GET() {
     id: t.id,
     name: deriveMerchant(t.raw, t.description) || t.merchant_name || (t.description || "").slice(0, 40),
     amount: t.amount,
-    date: t.booking_date,
+    date: t.value_date,
   }));
   return NextResponse.json({ transactions });
 }

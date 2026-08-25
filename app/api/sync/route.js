@@ -47,7 +47,7 @@ async function markTransfers(admin, userId) {
   if (!transferCatId) return;
   const { data: txs } = await admin
     .from("transactions")
-    .select("id,amount,connection_id,booking_date,category_source,category_id")
+    .select("id,amount,connection_id,booking_date,value_date,category_source,category_id")
     .eq("user_id", userId);
   const ids = detectTransferIds(txs || []);
   const toUpdate = (txs || []).filter(

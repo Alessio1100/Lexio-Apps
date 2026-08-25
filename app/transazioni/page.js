@@ -433,7 +433,8 @@ function shortBank(name) {
 function groupByDay(txs) {
   const map = new Map();
   for (const t of txs) {
-    const d = t.booking_date || "—";
+    // raggruppa per data OPERAZIONE (value_date), non contabile
+    const d = t.value_date || t.booking_date || "—";
     if (!map.has(d)) map.set(d, { date: d, items: [], spent: 0 });
     const g = map.get(d);
     g.items.push(t);

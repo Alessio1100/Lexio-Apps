@@ -24,10 +24,10 @@ export async function POST() {
     supabase
       .from("transactions")
       .select(
-        "id,merchant_name,description,amount,currency,is_foreign,category_id,category_source,booking_date,raw,bank_connections(institution_name)"
+        "id,merchant_name,description,amount,currency,is_foreign,category_id,category_source,value_date,raw,bank_connections(institution_name)"
       )
       .eq("user_id", user.id)
-      .order("booking_date", { ascending: false }), // dalla più recente
+      .order("value_date", { ascending: false }), // dalla più recente
   ]);
 
   const all = txs || [];
@@ -51,7 +51,7 @@ export async function POST() {
     return {
       name: displayName(t),
       amount: t.amount,
-      date: t.booking_date,
+      date: t.value_date,
       category: nameById[a.category_id] || "?",
       source: "memory",
     };
@@ -109,7 +109,7 @@ export async function POST() {
             results.push({
               name: displayName(t),
               amount: t.amount,
-              date: t.booking_date,
+              date: t.value_date,
               category: nameById[catId],
               source: "ai",
             });

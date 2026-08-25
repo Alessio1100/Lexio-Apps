@@ -75,6 +75,8 @@ alter table public.transactions add column if not exists is_foreign boolean not 
 alter table public.transactions add column if not exists is_fixed boolean not null default false;
 
 create index if not exists tx_user_date_idx on public.transactions (user_id, booking_date desc);
+-- filtri/ordinamento per data operazione (value_date)
+create index if not exists tx_user_valuedate_idx on public.transactions (user_id, value_date desc);
 create index if not exists tx_category_idx  on public.transactions (category_id);
 
 -- ---------- IMPOSTAZIONI (singleton per utente) ----------

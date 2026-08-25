@@ -21,11 +21,12 @@ export async function GET(request) {
       "*, categories(id,name,color,icon,is_income,bucket), bank_connections(id,institution_name)"
     )
     .eq("user_id", user.id)
-    .order("booking_date", { ascending: false })
+    // ordiniamo e filtriamo per data OPERAZIONE (value_date), non contabile
+    .order("value_date", { ascending: false })
     .order("created_at", { ascending: false });
 
-  if (from) query = query.gte("booking_date", from);
-  if (to) query = query.lt("booking_date", to);
+  if (from) query = query.gte("value_date", from);
+  if (to) query = query.lt("value_date", to);
   if (category === "none") query = query.is("category_id", null);
   else if (category) query = query.eq("category_id", category);
   if (connection) query = query.eq("connection_id", connection);

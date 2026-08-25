@@ -19,7 +19,7 @@ export async function POST(request) {
   const { data: tx } = await supabase
     .from("transactions")
     .select(
-      "id,merchant_name,description,amount,currency,is_foreign,category_id,category_source,booking_date,raw,bank_connections(institution_name)"
+      "id,merchant_name,description,amount,currency,is_foreign,category_id,category_source,value_date,raw,bank_connections(institution_name)"
     )
     .eq("id", id)
     .eq("user_id", user.id)
@@ -29,7 +29,7 @@ export async function POST(request) {
 
   const name =
     deriveMerchant(tx.raw, tx.description) || tx.merchant_name || (tx.description || "").slice(0, 40);
-  const base = { id: tx.id, name, amount: tx.amount, date: tx.booking_date };
+  const base = { id: tx.id, name, amount: tx.amount, date: tx.value_date };
 
   if (tx.category_id) return NextResponse.json({ ...base, skipped: true });
 
