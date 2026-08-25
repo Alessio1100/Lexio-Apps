@@ -610,16 +610,8 @@ svg { display: block; }
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  transform-origin: center;
-  transition: transform 0.85s cubic-bezier(0.22, 1, 0.36, 1);
 }
-/* in caricamento la Q è più grande (≈ splash nativa Android) e pulsa; nel reveal
-   si rimpicciolisce fino alla dimensione del wordmark, senza salti visibili */
-.splash-mark:not(.reveal) .splash-q {
-  transform: scale(1.7);
-  animation: qpulse 1.7s ease-in-out infinite;
-}
-.splash-mark.reveal .splash-q { transform: scale(1); }
+.splash-mark:not(.reveal) .splash-q { animation: qpulse 1.7s ease-in-out infinite; }
 .splash-word {
   font-family: var(--font-display);
   font-weight: 800;
@@ -633,7 +625,7 @@ svg { display: block; }
   margin-left: -0.28em;
   transform: translateX(-10px);
   transition: max-width 0.85s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 0.55s ease 0.28s, transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+    opacity 0.55s ease 0.1s, transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .splash-mark.reveal .splash-word {
   max-width: 3.4em;
@@ -641,8 +633,8 @@ svg { display: block; }
   transform: none;
 }
 @keyframes qpulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.68; }
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(0.94); opacity: 0.74; }
 }
 
 /* ---------- Dashboard ---------- */
