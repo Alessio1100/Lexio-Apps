@@ -1,7 +1,9 @@
 // Service worker: solo asset statici in cache. MAI dati dinamici o API
 // (contengono informazioni finanziarie/autenticate).
-const CACHE = "spese-v1";
-const ASSETS = ["/manifest.json", "/icon-192.png", "/icon-512.png"];
+// NB: il manifest NON è in cache-first (va servito sempre da rete) così nome e
+// icona dell'app si aggiornano; il nome cache è versionato per purgare i vecchi.
+const CACHE = "quadra-v1";
+const ASSETS = ["/icon-192.png", "/icon-512.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
