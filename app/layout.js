@@ -3,8 +3,8 @@ import NavBar from "../components/NavBar";
 import SWRegister from "../components/SWRegister";
 
 export const metadata = {
-  title: "Spese",
-  description: "Monitoraggio spese personali con OpenBanking",
+  title: "Quadra",
+  description: "Le tue spese e i tuoi conti, sempre quadrati",
   manifest: "/manifest.json",
 };
 
@@ -25,7 +25,7 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap"
         />
-        <link rel="apple-touch-icon" href="/icon-192.png" />
+        <link rel="apple-touch-icon" href="/apple-icon.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta
           name="apple-mobile-web-app-status-bar-style"

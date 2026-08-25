@@ -45,9 +45,32 @@ export default function LoginPage() {
   return (
     <div className="wrap" style={{ justifyContent: "center", maxWidth: 420 }}>
       <div style={{ textAlign: "center", marginBottom: 26 }}>
-        <div style={{ fontSize: 44 }}>💸</div>
-        <h1 style={{ fontSize: 26, fontWeight: 800, margin: "10px 0 4px" }}>
-          Le mie spese
+        <div
+          style={{
+            width: 68,
+            height: 68,
+            margin: "0 auto",
+            borderRadius: 20,
+            background: "#10161b",
+            border: "1px solid var(--border)",
+            display: "grid",
+            placeItems: "center",
+          }}
+        >
+          <svg viewBox="0 0 100 100" width="44" height="44" aria-hidden="true">
+            <defs>
+              <linearGradient id="loginq" gradientUnits="userSpaceOnUse" x1="24" y1="24" x2="80" y2="80">
+                <stop offset="0" stopColor="#10b981" />
+                <stop offset="1" stopColor="#22d3ee" />
+              </linearGradient>
+            </defs>
+            <circle cx="50" cy="50" r="24" fill="none" stroke="url(#loginq)" strokeWidth="11" />
+            <circle cx="50" cy="50" r="24" fill="none" stroke="#fbbf24" strokeWidth="11" strokeDasharray="37 200" transform="rotate(180 50 50)" />
+            <line x1="61" y1="61" x2="73" y2="73" stroke="url(#loginq)" strokeWidth="11" strokeLinecap="round" />
+          </svg>
+        </div>
+        <h1 style={{ fontSize: 26, fontWeight: 800, margin: "14px 0 4px", fontFamily: "var(--font-display)" }}>
+          Quadra
         </h1>
         <p style={{ color: "var(--muted)", fontSize: 14, margin: 0 }}>
           {mode === "signin" ? "Accedi al tuo account" : "Crea il tuo account"}

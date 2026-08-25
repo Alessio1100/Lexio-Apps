@@ -1,11 +1,11 @@
 {
-  "name": "Le mie spese",
-  "short_name": "Spese",
-  "description": "Monitoraggio spese personali con OpenBanking",
+  "name": "Quadra",
+  "short_name": "Quadra",
+  "description": "Le tue spese e i tuoi conti, sempre quadrati",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f1117",
-  "theme_color": "#0f1117",
+  "background_color": "#0a0d0f",
+  "theme_color": "#0a0d0f",
   "orientation": "portrait",
   "icons": [
     {
