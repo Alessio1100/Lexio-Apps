@@ -111,7 +111,12 @@ export default function TransazioniPage() {
         currency,
       });
       setAdding(false);
-      reload();
+      // salta al periodo che contiene la nuova spesa, così è subito visibile
+      // (anche se la data cade in un mese diverso da quello che stai guardando);
+      // il cambio di refDate fa ripartire il caricamento tramite l'effect.
+      if (fCat) setFCat(""); // togli un eventuale filtro categoria che la nasconderebbe
+      if (form.date) setRefDate(new Date(`${form.date}T12:00:00`));
+      else reload();
     } catch (e) {
       alert(e.message);
     }
