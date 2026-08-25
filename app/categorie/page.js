@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
+import { getCache, setCache, clearCache } from "../../lib/cache";
 
 const PALETTE = [
   "#22c55e", "#f97316", "#eab308", "#3b82f6", "#ec4899",
@@ -26,16 +27,27 @@ const BUCKETS = [
 ];
 
 export default function CategoriePage() {
-  const [cats, setCats] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [cats, setCats] = useState(() => getCache("/api/categories") || []);
+  const [loading, setLoading] = useState(() => getCache("/api/categories") === undefined);
   const [editing, setEditing] = useState(null); // oggetto in modifica o EMPTY
 
   function load() {
-    setLoading(true);
+    const cached = getCache("/api/categories");
+    if (cached !== undefined) {
+      setCats(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
     api
       .get("/api/categories")
-      .then((d) => setCats(d || []))
-      .catch(() => setCats([]))
+      .then((d) => {
+        setCache("/api/categories", d || []);
+        setCats(d || []);
+      })
+      .catch(() => {
+        if (cached === undefined) setCats([]);
+      })
       .finally(() => setLoading(false));
   }
   useEffect(load, []);
@@ -44,6 +56,8 @@ export default function CategoriePage() {
     try {
       if (cat.id) await api.patch(`/api/categories/${cat.id}`, cat);
       else await api.post("/api/categories", cat);
+      clearCache("/api/categories");
+      clearCache("/api/transactions");
       setEditing(null);
       load();
     } catch (e) {
@@ -56,6 +70,8 @@ export default function CategoriePage() {
       return;
     try {
       await api.del(`/api/categories/${id}`);
+      clearCache("/api/categories");
+      clearCache("/api/transactions");
       load();
     } catch (e) {
       alert(e.message);
@@ -77,7 +93,7 @@ export default function CategoriePage() {
         </button>
       </header>
 
-      {loading ? (
+      {loading && cats.length === 0 ? (
         <div className="spinner">Caricamento…</div>
       ) : (
         <>

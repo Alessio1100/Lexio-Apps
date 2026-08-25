@@ -35,6 +35,14 @@ export default function Dashboard() {
   const [txs, setTxs] = useState(init.current.txs ?? []);
   const [prevTotal, setPrevTotal] = useState(0);
   const [loading, setLoading] = useState(init.current.txs === undefined);
+  const [syncTick, setSyncTick] = useState(0);
+
+  // quando il sync di sessione porta nuove transazioni, ricarica in silenzio
+  useEffect(() => {
+    const h = () => setSyncTick((t) => t + 1);
+    window.addEventListener("tx-synced", h);
+    return () => window.removeEventListener("tx-synced", h);
+  }, []);
 
   useEffect(() => {
     const cached = getCache("/api/settings");
@@ -96,7 +104,7 @@ export default function Dashboard() {
         }
       })
       .finally(() => setLoading(false));
-  }, [settings, period, refDate, day, range.start, range.end]);
+  }, [settings, period, refDate, day, range.start, range.end, syncTick]);
 
   const stats = useMemo(() => computeStats(txs, range, prevTotal), [txs, range, prevTotal]);
   const daily = useMemo(() => buildDaily(txs, range), [txs, range]);
@@ -120,7 +128,7 @@ export default function Dashboard() {
         anchors={anchors}
       />
 
-      {loading ? (
+      {loading && txs.length === 0 ? (
         <div className="spinner">Caricamento…</div>
       ) : (
         <DashboardView stats={stats} daily={daily} insights={insights} currency={currency} period={period} refDate={refDate} />

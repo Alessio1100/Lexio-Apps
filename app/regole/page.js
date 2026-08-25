@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
+import { getCache, setCache, clearCache } from "../../lib/cache";
 
 const FIELDS = [
   { value: "description", label: "Descrizione" },
@@ -48,18 +49,28 @@ const emptyRule = () => ({
 });
 
 export default function RegolePage() {
-  const [rules, setRules] = useState([]);
-  const [cats, setCats] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [rules, setRules] = useState(() => getCache("/api/rules") || []);
+  const [cats, setCats] = useState(() => getCache("/api/categories") || []);
+  const [loading, setLoading] = useState(() => getCache("/api/rules") === undefined);
   const [editing, setEditing] = useState(null);
   const [msg, setMsg] = useState(null);
 
   function load() {
-    setLoading(true);
+    const cr = getCache("/api/rules");
+    if (cr !== undefined) {
+      setRules(cr);
+      const cc = getCache("/api/categories");
+      if (cc !== undefined) setCats(cc);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
     Promise.all([
       api.get("/api/rules").catch(() => []),
       api.get("/api/categories").catch(() => []),
     ]).then(([r, c]) => {
+      setCache("/api/rules", r || []);
+      setCache("/api/categories", c || []);
       setRules(r || []);
       setCats(c || []);
       setLoading(false);
@@ -73,6 +84,7 @@ export default function RegolePage() {
     try {
       if (rule.id) await api.patch(`/api/rules/${rule.id}`, rule);
       else await api.post("/api/rules", rule);
+      clearCache("/api/rules");
       setEditing(null);
       load();
     } catch (e) {
@@ -83,6 +95,7 @@ export default function RegolePage() {
   async function remove(id) {
     if (!confirm("Eliminare la regola?")) return;
     await api.del(`/api/rules/${id}`);
+    clearCache("/api/rules");
     load();
   }
 
@@ -90,6 +103,8 @@ export default function RegolePage() {
     setMsg(null);
     try {
       const r = await api.post("/api/rules/reapply");
+      clearCache("/api/transactions"); // le categorie delle transazioni sono cambiate
+      window.dispatchEvent(new CustomEvent("tx-synced", { detail: r }));
       setMsg({ type: "ok", text: `Ricategorizzate ${r.updated} transazioni.` });
     } catch (e) {
       setMsg({ type: "err", text: e.message });
@@ -118,7 +133,7 @@ export default function RegolePage() {
         prima che corrisponde. Le categorie assegnate a mano non vengono toccate.
       </div>
 
-      {loading ? (
+      {loading && rules.length === 0 ? (
         <div className="spinner">Caricamento…</div>
       ) : rules.length === 0 ? (
         <div className="empty">Nessuna regola. Creane una per categorizzare in automatico.</div>

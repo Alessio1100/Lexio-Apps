@@ -15,7 +15,7 @@ function QMark({ size = 22 }) {
         </linearGradient>
       </defs>
       <circle cx="50" cy="50" r="24" fill="none" stroke="url(#navq)" strokeWidth="11" />
-      <circle cx="50" cy="50" r="24" fill="none" stroke="#fbbf24" strokeWidth="11" strokeDasharray="37 200" transform="rotate(180 50 50)" />
+      <path d="M 33.03 33.03 A 24 24 0 0 1 66.97 33.03" fill="none" stroke="#fbbf24" strokeWidth="11" />
       <line x1="61" y1="61" x2="73" y2="73" stroke="url(#navq)" strokeWidth="11" strokeLinecap="round" />
     </svg>
   );

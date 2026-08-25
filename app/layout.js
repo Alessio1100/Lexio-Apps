@@ -1,6 +1,7 @@
 import "./globals.css";
 import NavBar from "../components/NavBar";
 import SWRegister from "../components/SWRegister";
+import SessionSync from "../components/SessionSync";
 
 export const metadata = {
   title: "Quadra",
@@ -36,6 +37,7 @@ export default function RootLayout({ children }) {
         {children}
         <NavBar />
         <SWRegister />
+        <SessionSync />
       </body>
     </html>
   );

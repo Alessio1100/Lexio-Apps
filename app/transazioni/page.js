@@ -42,7 +42,15 @@ export default function TransazioniPage() {
   const [editing, setEditing] = useState(null);
   const [adding, setAdding] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [syncTick, setSyncTick] = useState(0);
   const urlPeriod = useRef(false); // periodo impostato da URL (arrivo dal grafico)
+
+  // ricarica in silenzio quando il sync di sessione porta nuove transazioni
+  useEffect(() => {
+    const h = () => setSyncTick((t) => t + 1);
+    window.addEventListener("tx-synced", h);
+    return () => window.removeEventListener("tx-synced", h);
+  }, []);
 
   // Filtro/periodo iniziali da querystring (link dalla torta della dashboard).
   useEffect(() => {
@@ -131,7 +139,7 @@ export default function TransazioniPage() {
   useEffect(() => {
     reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings, period, refDate, day, fCat, fConn]);
+  }, [settings, period, refDate, day, fCat, fConn, syncTick]);
 
   const groups = useMemo(() => groupByDay(txs), [txs]);
 
@@ -268,7 +276,7 @@ export default function TransazioniPage() {
         </div>
       )}
 
-      {loading ? (
+      {loading && txs.length === 0 ? (
         <div className="spinner">Caricamento…</div>
       ) : groups.length === 0 ? (
         <div className="empty">

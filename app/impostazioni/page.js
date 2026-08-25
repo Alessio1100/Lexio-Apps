@@ -3,14 +3,15 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "../../lib/api";
+import { getCache, setCache, clearCache } from "../../lib/cache";
 import { createClient } from "../../lib/supabase/client";
 import { PERIODS, PERIOD_LABELS } from "../../lib/periods";
 import { formatMoney, formatDateShort } from "../../lib/format";
 
 export default function ImpostazioniPage() {
   const router = useRouter();
-  const [settings, setSettings] = useState(null);
-  const [connections, setConnections] = useState([]);
+  const [settings, setSettings] = useState(() => getCache("/api/settings") || null);
+  const [connections, setConnections] = useState(() => getCache("/api/enablebanking/connections") || []);
   const [msg, setMsg] = useState(null);
   const [syncing, setSyncing] = useState(false);
   const [classifying, setClassifying] = useState(false);
@@ -21,12 +22,21 @@ export default function ImpostazioniPage() {
   function loadConnections() {
     api
       .get("/api/enablebanking/connections")
-      .then((d) => setConnections(d || []))
-      .catch(() => setConnections([]));
+      .then((d) => {
+        setCache("/api/enablebanking/connections", d || []);
+        setConnections(d || []);
+      })
+      .catch(() => {});
   }
 
   useEffect(() => {
-    api.get("/api/settings").then(setSettings).catch(() => {});
+    api
+      .get("/api/settings")
+      .then((s) => {
+        setCache("/api/settings", s);
+        setSettings(s);
+      })
+      .catch(() => {});
     loadConnections();
     // messaggi dal redirect di consenso bancario
     const p = new URLSearchParams(window.location.search);
@@ -38,6 +48,8 @@ export default function ImpostazioniPage() {
   async function patchSettings(patch) {
     const next = { ...settings, ...patch };
     setSettings(next);
+    clearCache("/api/settings"); // il GET ricalcola gli anchor stipendio
+    clearCache("/api/transactions"); // i confini dei periodi potrebbero cambiare
     try {
       await api.put("/api/settings", patch);
     } catch (e) {
@@ -76,6 +88,8 @@ export default function ImpostazioniPage() {
     setMsg(null);
     try {
       const r = await api.post("/api/sync");
+      clearCache("/api/transactions");
+      window.dispatchEvent(new CustomEvent("tx-synced", { detail: r }));
       setMsg({
         type: "ok",
         text: `Sincronizzazione completata: ${r.inserted} nuove transazioni.`,
@@ -169,6 +183,8 @@ export default function ImpostazioniPage() {
       setMsg({ type: "err", text: e.message });
     } finally {
       setClassifying(false);
+      clearCache("/api/transactions"); // categorie AI aggiornate
+      window.dispatchEvent(new CustomEvent("tx-synced"));
     }
   }
 
