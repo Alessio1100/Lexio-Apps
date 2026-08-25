@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import PeriodBar from "../components/PeriodBar";
 import DashboardView from "../components/DashboardView";
+import SplashScreen from "../components/SplashScreen";
 import { api } from "../lib/api";
 import { getCache, setCache } from "../lib/cache";
 import { getPeriodRange, toDateStr, periodProgress, shiftPeriod } from "../lib/periods";
@@ -26,9 +27,13 @@ function readInitial() {
   return { s: s || null, period, txs };
 }
 
+// mostrata una sola volta per sessione, solo all'apertura a freddo (cache vuota)
+let splashDone = false;
+
 export default function Dashboard() {
   const init = useRef(null);
   if (!init.current) init.current = readInitial();
+  const [splash, setSplash] = useState(() => !splashDone && init.current.s === null);
   const [settings, setSettings] = useState(init.current.s);
   const [period, setPeriod] = useState(init.current.period);
   const [refDate, setRefDate] = useState(() => new Date());
@@ -132,6 +137,16 @@ export default function Dashboard() {
         <div className="spinner">Caricamento…</div>
       ) : (
         <DashboardView stats={stats} daily={daily} insights={insights} currency={currency} period={period} refDate={refDate} />
+      )}
+
+      {splash && (
+        <SplashScreen
+          ready={!loading}
+          onDone={() => {
+            splashDone = true;
+            setSplash(false);
+          }}
+        />
       )}
     </div>
   );
