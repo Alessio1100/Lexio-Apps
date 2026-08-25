@@ -3,20 +3,39 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import PeriodBar from "../../components/PeriodBar";
 import { api } from "../../lib/api";
+import { getCache, setCache, clearCache } from "../../lib/cache";
 import { getPeriodRange, toDateStr } from "../../lib/periods";
 import { formatMoney, formatDateLong } from "../../lib/format";
 import { catColor } from "../../lib/colors";
 import { CatIcon } from "../../lib/icons";
 import { Plus, Pin, ListFilter } from "lucide-react";
 
+// Stato iniziale da cache (vedi dashboard). Salta l'init se arrivo con parametri
+// URL (drill-down dalla torta): lì il filtro è nuovo e va caricato.
+function readInitialTx() {
+  const s = getCache("/api/settings");
+  const cats = getCache("/api/categories") || [];
+  const conns = getCache("/api/enablebanking/connections") || [];
+  const hasParams = typeof window !== "undefined" && window.location.search.length > 1;
+  const period = s?.default_period || "month";
+  let txs;
+  if (s && !hasParams) {
+    const range = getPeriodRange(period, new Date(), s.month_start_day ?? 1, s.salary_anchors || null);
+    txs = getCache(`/api/transactions?from=${toDateStr(range.start)}&to=${toDateStr(range.end)}`);
+  }
+  return { s: s || null, cats, conns, period, txs };
+}
+
 export default function TransazioniPage() {
-  const [settings, setSettings] = useState(null);
-  const [categories, setCategories] = useState([]);
-  const [connections, setConnections] = useState([]);
-  const [period, setPeriod] = useState("month");
-  const [refDate, setRefDate] = useState(new Date());
-  const [txs, setTxs] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const init = useRef(null);
+  if (!init.current) init.current = readInitialTx();
+  const [settings, setSettings] = useState(init.current.s);
+  const [categories, setCategories] = useState(init.current.cats);
+  const [connections, setConnections] = useState(init.current.conns);
+  const [period, setPeriod] = useState(init.current.period);
+  const [refDate, setRefDate] = useState(() => new Date());
+  const [txs, setTxs] = useState(init.current.txs ?? []);
+  const [loading, setLoading] = useState(init.current.txs === undefined);
   const [fCat, setFCat] = useState("");
   const [fConn, setFConn] = useState("");
   const [q, setQ] = useState("");
@@ -46,13 +65,27 @@ export default function TransazioniPage() {
   }, []);
 
   useEffect(() => {
+    // dati già visti: mostrali subito, poi aggiorna in background
+    const cs = getCache("/api/settings");
+    const cc = getCache("/api/categories");
+    const cn = getCache("/api/enablebanking/connections");
+    if (cs) {
+      setSettings(cs);
+      if (cs.default_period && !urlPeriod.current) setPeriod(cs.default_period);
+    }
+    if (cc) setCategories(cc);
+    if (cn) setConnections(cn);
+
     Promise.all([
       api.get("/api/settings").catch(() => ({ month_start_day: 1, currency: "EUR" })),
       api.get("/api/categories").catch(() => []),
       api.get("/api/enablebanking/connections").catch(() => []),
     ]).then(([s, c, conn]) => {
+      setCache("/api/settings", s);
+      setCache("/api/categories", c || []);
+      setCache("/api/enablebanking/connections", conn || []);
       setSettings(s);
-      if (s?.default_period && !urlPeriod.current) setPeriod(s.default_period);
+      if (s?.default_period && !urlPeriod.current && !cs) setPeriod(s.default_period);
       setCategories(c || []);
       setConnections(conn || []);
     });
@@ -68,7 +101,6 @@ export default function TransazioniPage() {
 
   function reload() {
     if (!settings) return;
-    setLoading(true);
     const params = new URLSearchParams({
       from: toDateStr(range.start),
       to: toDateStr(range.end),
@@ -76,10 +108,23 @@ export default function TransazioniPage() {
     if (fCat) params.set("category", fCat);
     if (fConn) params.set("connection", fConn);
     if (q) params.set("q", q);
+    const url = `/api/transactions?${params}`;
+    const cached = getCache(url);
+    if (cached !== undefined) {
+      setTxs(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
     api
-      .get(`/api/transactions?${params}`)
-      .then((d) => setTxs(d || []))
-      .catch(() => setTxs([]))
+      .get(url)
+      .then((d) => {
+        setCache(url, d || []);
+        setTxs(d || []);
+      })
+      .catch(() => {
+        if (cached === undefined) setTxs([]);
+      })
       .finally(() => setLoading(false));
   }
 
@@ -103,6 +148,7 @@ export default function TransazioniPage() {
             : t
         )
       );
+      clearCache("/api/transactions"); // i dati sono cambiati: invalida la cache
       setEditing(null);
     } catch (e) {
       alert(e.message);
@@ -123,6 +169,7 @@ export default function TransazioniPage() {
           return same ? { ...t, is_fixed: next } : t;
         })
       );
+      clearCache("/api/transactions");
       setEditing((e) => (e ? { ...e, is_fixed: next } : e));
     } catch (e) {
       alert(e.message);
@@ -140,6 +187,7 @@ export default function TransazioniPage() {
         currency,
       });
       setAdding(false);
+      clearCache("/api/transactions"); // nuova spesa: invalida la cache
       // salta al periodo che contiene la nuova spesa, così è subito visibile
       // (anche se la data cade in un mese diverso da quello che stai guardando);
       // il cambio di refDate fa ripartire il caricamento tramite l'effect.

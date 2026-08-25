@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   TrendingUp, PiggyBank, Telescope, Trophy, Pin, Minus, PartyPopper,
   TriangleAlert, Target,
@@ -8,25 +8,50 @@ import {
 import PeriodBar from "../components/PeriodBar";
 import DashboardView from "../components/DashboardView";
 import { api } from "../lib/api";
+import { getCache, setCache } from "../lib/cache";
 import { getPeriodRange, toDateStr, periodProgress, shiftPeriod } from "../lib/periods";
 import { formatMoney } from "../lib/format";
 
+// Stato iniziale da cache: se sono già stato qui (cache calda) mostro subito i
+// dati, senza spinner né flash. Al primo caricamento la cache è vuota (SSR e
+// client concordano), quindi nessun problema di hydration.
+function readInitial() {
+  const s = getCache("/api/settings");
+  const period = s?.default_period || "month";
+  let txs;
+  if (s) {
+    const range = getPeriodRange(period, new Date(), s.month_start_day ?? 1, s.salary_anchors || null);
+    txs = getCache(`/api/transactions?from=${toDateStr(range.start)}&to=${toDateStr(range.end)}`);
+  }
+  return { s: s || null, period, txs };
+}
+
 export default function Dashboard() {
-  const [settings, setSettings] = useState(null);
-  const [period, setPeriod] = useState("month");
-  const [refDate, setRefDate] = useState(new Date());
-  const [txs, setTxs] = useState([]);
+  const init = useRef(null);
+  if (!init.current) init.current = readInitial();
+  const [settings, setSettings] = useState(init.current.s);
+  const [period, setPeriod] = useState(init.current.period);
+  const [refDate, setRefDate] = useState(() => new Date());
+  const [txs, setTxs] = useState(init.current.txs ?? []);
   const [prevTotal, setPrevTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(init.current.txs === undefined);
 
   useEffect(() => {
+    const cached = getCache("/api/settings");
+    if (cached) {
+      setSettings(cached);
+      if (cached.default_period) setPeriod(cached.default_period);
+    }
     api
       .get("/api/settings")
       .then((s) => {
+        setCache("/api/settings", s);
         setSettings(s);
-        if (s?.default_period) setPeriod(s.default_period);
+        if (!cached && s?.default_period) setPeriod(s.default_period);
       })
-      .catch(() => setSettings({ month_start_day: 1, currency: "EUR" }));
+      .catch(() => {
+        if (!cached) setSettings({ month_start_day: 1, currency: "EUR" });
+      });
   }, []);
 
   const day = settings?.month_start_day ?? 1;
@@ -39,25 +64,36 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!settings) return;
-    setLoading(true);
     const from = toDateStr(range.start);
     const to = toDateStr(range.end);
+    const curUrl = `/api/transactions?from=${from}&to=${to}`;
     const prevRef = shiftPeriod(period, refDate, day, -1, anchors);
     const prevRange = getPeriodRange(period, prevRef, day, anchors);
+    const prevUrl = `/api/transactions?from=${toDateStr(prevRange.start)}&to=${toDateStr(prevRange.end)}`;
 
-    Promise.all([
-      api.get(`/api/transactions?from=${from}&to=${to}`),
-      api.get(
-        `/api/transactions?from=${toDateStr(prevRange.start)}&to=${toDateStr(prevRange.end)}`
-      ),
-    ])
+    // stale-while-revalidate: se ho già i dati in cache li mostro subito (niente spinner)
+    const cCur = getCache(curUrl);
+    const cPrev = getCache(prevUrl);
+    if (cCur !== undefined) {
+      setTxs(cCur);
+      if (cPrev !== undefined) setPrevTotal(netExpenses(cPrev));
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+
+    Promise.all([api.get(curUrl), api.get(prevUrl)])
       .then(([cur, prev]) => {
+        setCache(curUrl, cur || []);
+        setCache(prevUrl, prev || []);
         setTxs(cur || []);
         setPrevTotal(netExpenses(prev || []));
       })
       .catch(() => {
-        setTxs([]);
-        setPrevTotal(0);
+        if (cCur === undefined) {
+          setTxs([]);
+          setPrevTotal(0);
+        }
       })
       .finally(() => setLoading(false));
   }, [settings, period, refDate, day, range.start, range.end]);
