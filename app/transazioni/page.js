@@ -35,7 +35,11 @@ export default function TransazioniPage() {
 
   const day = settings?.month_start_day ?? 1;
   const currency = settings?.currency ?? "EUR";
-  const range = useMemo(() => getPeriodRange(period, refDate, day), [period, refDate, day]);
+  const anchors = settings?.salary_anchors || null;
+  const range = useMemo(
+    () => getPeriodRange(period, refDate, day, anchors),
+    [period, refDate, day, anchors]
+  );
 
   function reload() {
     if (!settings) return;
@@ -140,6 +144,7 @@ export default function TransazioniPage() {
         refDate={refDate}
         setRefDate={setRefDate}
         day={day}
+        anchors={anchors}
       />
 
       {/* filtri */}

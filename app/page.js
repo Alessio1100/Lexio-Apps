@@ -28,7 +28,11 @@ export default function Dashboard() {
 
   const day = settings?.month_start_day ?? 1;
   const currency = settings?.currency ?? "EUR";
-  const range = useMemo(() => getPeriodRange(period, refDate, day), [period, refDate, day]);
+  const anchors = settings?.salary_anchors || null;
+  const range = useMemo(
+    () => getPeriodRange(period, refDate, day, anchors),
+    [period, refDate, day, anchors]
+  );
 
   // carica transazioni del periodo (+ periodo precedente per confronto)
   useEffect(() => {
@@ -36,8 +40,8 @@ export default function Dashboard() {
     setLoading(true);
     const from = toDateStr(range.start);
     const to = toDateStr(range.end);
-    const prevRef = shiftPeriod(period, refDate, day, -1);
-    const prevRange = getPeriodRange(period, prevRef, day);
+    const prevRef = shiftPeriod(period, refDate, day, -1, anchors);
+    const prevRange = getPeriodRange(period, prevRef, day, anchors);
 
     Promise.all([
       api.get(`/api/transactions?from=${from}&to=${to}`),
@@ -75,6 +79,7 @@ export default function Dashboard() {
         refDate={refDate}
         setRefDate={setRefDate}
         day={day}
+        anchors={anchors}
       />
 
       {loading ? (

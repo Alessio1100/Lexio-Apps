@@ -8,8 +8,8 @@ import {
   shiftPeriod,
 } from "../lib/periods";
 
-export default function PeriodBar({ period, setPeriod, refDate, setRefDate, day }) {
-  const range = getPeriodRange(period, refDate, day);
+export default function PeriodBar({ period, setPeriod, refDate, setRefDate, day, anchors = null }) {
+  const range = getPeriodRange(period, refDate, day, anchors);
   return (
     <div>
       <div className="chiprow">
@@ -26,7 +26,7 @@ export default function PeriodBar({ period, setPeriod, refDate, setRefDate, day 
       <div className="periodnav">
         <button
           className="arrow"
-          onClick={() => setRefDate(shiftPeriod(period, refDate, day, -1))}
+          onClick={() => setRefDate(shiftPeriod(period, refDate, day, -1, anchors))}
           aria-label="Periodo precedente"
         >
           ‹
@@ -34,7 +34,7 @@ export default function PeriodBar({ period, setPeriod, refDate, setRefDate, day 
         <div className="plabel">{periodLabel(period, range)}</div>
         <button
           className="arrow"
-          onClick={() => setRefDate(shiftPeriod(period, refDate, day, 1))}
+          onClick={() => setRefDate(shiftPeriod(period, refDate, day, 1, anchors))}
           aria-label="Periodo successivo"
         >
           ›

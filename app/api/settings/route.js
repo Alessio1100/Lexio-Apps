@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getUser } from "../../../lib/auth";
+import { salaryAnchorsFromTx } from "../../../lib/periods";
 
 export async function GET() {
   const { supabase, user } = await getUser();
@@ -19,6 +20,26 @@ export async function GET() {
       .select()
       .single();
     data = created;
+  }
+
+  // Modalità "salary": i confini dei periodi seguono la data reale dell'accredito
+  // stipendio (bonifico "EMOLUMENTI"). Calcoliamo la mappa mese->data e la
+  // alleghiamo alla risposta (non è persistita: dipende dalle transazioni).
+  if (data?.month_start_mode === "salary") {
+    const since = new Date(Date.now() - 400 * 24 * 3600 * 1000)
+      .toISOString()
+      .slice(0, 10);
+    const { data: sal } = await supabase
+      .from("transactions")
+      .select("value_date, booking_date, amount")
+      .eq("user_id", user.id)
+      .gt("amount", 0)
+      .ilike("description", "%EMOLUMENTI%")
+      .gte("value_date", since);
+    data = {
+      ...data,
+      salary_anchors: salaryAnchorsFromTx(sal || [], data.month_start_day || 23),
+    };
   }
   return NextResponse.json(data);
 }
