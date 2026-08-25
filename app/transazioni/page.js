@@ -369,7 +369,7 @@ function CategoryModal({ tx, categories, currency, onClose, onAssign, onToggleFi
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <h3>Categorizza</h3>
         <div style={{ marginBottom: 14, color: "var(--muted)", fontSize: 13 }}>
-          {tx.display_name || tx.merchant_name || tx.description}
+          {tx.description || tx.merchant_name || tx.display_name}
           <div style={{ color: "var(--text)", fontWeight: 700, marginTop: 4 }}>
             {formatMoney(Number(tx.amount), currency)}
           </div>

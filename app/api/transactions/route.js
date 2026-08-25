@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { getUser } from "../../../lib/auth";
-import { deriveMerchant } from "../../../lib/enablebanking";
+import { deriveDisplayName } from "../../../lib/enablebanking";
 
 // GET /api/transactions?from=YYYY-MM-DD&to=YYYY-MM-DD&category=&connection=&q=
 export async function GET(request) {
@@ -41,7 +41,7 @@ export async function GET(request) {
     return {
       ...rest,
       display_name:
-        deriveMerchant(raw, r.description) || r.merchant_name || r.description || "",
+        deriveDisplayName(raw, r.description) || r.merchant_name || r.description || "",
     };
   });
   return NextResponse.json(rows);
