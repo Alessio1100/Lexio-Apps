@@ -605,8 +605,8 @@ svg { display: block; }
   animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .splash-q {
-  width: clamp(58px, 15vw, 78px);
-  height: clamp(58px, 15vw, 78px);
+  width: clamp(78px, 20vw, 104px);
+  height: clamp(78px, 20vw, 104px);
   display: grid;
   place-items: center;
   flex-shrink: 0;
@@ -615,14 +615,14 @@ svg { display: block; }
 .splash-word {
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: clamp(46px, 12vw, 62px);
+  font-size: clamp(56px, 14.5vw, 76px);
   letter-spacing: -2px;
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   max-width: 0;
   opacity: 0;
-  margin-left: -0.14em;
+  margin-left: -0.28em;
   transform: translateX(-6px);
   transition: max-width 0.55s cubic-bezier(0.22, 1, 0.36, 1),
     opacity 0.4s ease 0.06s, transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);

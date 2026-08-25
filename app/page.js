@@ -27,6 +27,26 @@ function readInitial() {
   return { s: s || null, period, txs };
 }
 
+// Confronto leggero: i dati transazioni sono "gli stessi"? Serve a evitare
+// re-render (e ri-animazioni della torta) quando la revalidation in background
+// restituisce dati identici a quelli già mostrati dalla cache.
+function sameTx(a, b) {
+  if (a === b) return true;
+  if (!a || !b || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i], y = b[i];
+    if (
+      x.id !== y.id ||
+      x.amount !== y.amount ||
+      x.category_id !== y.category_id ||
+      x.is_fixed !== y.is_fixed ||
+      x.value_date !== y.value_date
+    )
+      return false;
+  }
+  return true;
+}
+
 // mostrata una sola volta per sessione, solo all'apertura a freddo (cache vuota)
 let splashDone = false;
 
@@ -97,10 +117,13 @@ export default function Dashboard() {
 
     Promise.all([api.get(curUrl), api.get(prevUrl)])
       .then(([cur, prev]) => {
-        setCache(curUrl, cur || []);
-        setCache(prevUrl, prev || []);
-        setTxs(cur || []);
-        setPrevTotal(netExpenses(prev || []));
+        const c = cur || [];
+        const p = prev || [];
+        setCache(curUrl, c);
+        setCache(prevUrl, p);
+        // aggiorna solo se cambiato → niente ri-animazione della torta a vuoto
+        setTxs((old) => (sameTx(old, c) ? old : c));
+        setPrevTotal(netExpenses(p));
       })
       .catch(() => {
         if (cCur === undefined) {
