@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LayoutDashboard, Wallet, Tags, SlidersHorizontal, Settings, Landmark } from "lucide-react";
 
 const ITEMS = [
-  { href: "/", label: "Home", icon: "📊" },
-  { href: "/transazioni", label: "Spese", icon: "📃" },
-  { href: "/categorie", label: "Categorie", icon: "🏷️" },
-  { href: "/regole", label: "Regole", icon: "⚙️" },
-  { href: "/impostazioni", label: "Impostazioni", icon: "👤" },
+  { href: "/", label: "Home", Icon: LayoutDashboard },
+  { href: "/transazioni", label: "Spese", Icon: Wallet },
+  { href: "/categorie", label: "Categorie", Icon: Tags },
+  { href: "/regole", label: "Regole", Icon: SlidersHorizontal },
+  { href: "/impostazioni", label: "Impostazioni", Icon: Settings },
 ];
 
 export default function NavBar() {
@@ -22,18 +23,19 @@ export default function NavBar() {
     return null;
 
   return (
-    <nav className="bottomnav">
-      {ITEMS.map((it) => {
-        const active =
-          it.href === "/" ? pathname === "/" : pathname?.startsWith(it.href);
+    <nav className="appnav">
+      <div className="appnav-brand">
+        <span className="logo">
+          <Landmark size={20} strokeWidth={2.4} />
+        </span>
+        <span>Le mie spese</span>
+      </div>
+      {ITEMS.map(({ href, label, Icon }) => {
+        const active = href === "/" ? pathname === "/" : pathname?.startsWith(href);
         return (
-          <Link
-            key={it.href}
-            href={it.href}
-            className={`navitem ${active ? "active" : ""}`}
-          >
-            <span className="navicon">{it.icon}</span>
-            <span className="navlabel">{it.label}</span>
+          <Link key={href} href={href} className={`navitem ${active ? "active" : ""}`}>
+            <Icon strokeWidth={active ? 2.4 : 2} />
+            <span className="navlabel">{label}</span>
           </Link>
         );
       })}

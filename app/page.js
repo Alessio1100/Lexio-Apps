@@ -1,11 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import {
+  TrendingUp, PiggyBank, Telescope, Trophy, Pin, Minus, PartyPopper,
+  TriangleAlert, Target,
+} from "lucide-react";
 import PeriodBar from "../components/PeriodBar";
-import CategoryPie from "../components/CategoryPie";
+import DashboardView from "../components/DashboardView";
 import { api } from "../lib/api";
 import { getPeriodRange, toDateStr, periodProgress, shiftPeriod } from "../lib/periods";
-import { formatMoney, formatPct } from "../lib/format";
+import { formatMoney } from "../lib/format";
 
 export default function Dashboard() {
   const [settings, setSettings] = useState(null);
@@ -15,7 +19,6 @@ export default function Dashboard() {
   const [prevTotal, setPrevTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // carica impostazioni all'avvio
   useEffect(() => {
     api
       .get("/api/settings")
@@ -34,7 +37,6 @@ export default function Dashboard() {
     [period, refDate, day, anchors]
   );
 
-  // carica transazioni del periodo (+ periodo precedente per confronto)
   useEffect(() => {
     if (!settings) return;
     setLoading(true);
@@ -46,9 +48,7 @@ export default function Dashboard() {
     Promise.all([
       api.get(`/api/transactions?from=${from}&to=${to}`),
       api.get(
-        `/api/transactions?from=${toDateStr(prevRange.start)}&to=${toDateStr(
-          prevRange.end
-        )}`
+        `/api/transactions?from=${toDateStr(prevRange.start)}&to=${toDateStr(prevRange.end)}`
       ),
     ])
       .then(([cur, prev]) => {
@@ -63,13 +63,15 @@ export default function Dashboard() {
   }, [settings, period, refDate, day, range.start, range.end]);
 
   const stats = useMemo(() => computeStats(txs, range, prevTotal), [txs, range, prevTotal]);
+  const daily = useMemo(() => buildDaily(txs, range), [txs, range]);
+  const insights = useMemo(() => buildInsights(stats, currency, period), [stats, currency, period]);
 
   return (
     <div className="wrap">
       <header className="pagehead">
         <div>
           <div className="pagetitle">Panoramica</div>
-          <div className="pagesub">Le tue spese in sintesi</div>
+          <div className="pagesub">Le tue finanze in sintesi</div>
         </div>
       </header>
 
@@ -85,174 +87,22 @@ export default function Dashboard() {
       {loading ? (
         <div className="spinner">Caricamento…</div>
       ) : (
-        <>
-          {/* KPI principale + torta */}
-          <div className="card" style={{ marginTop: 6 }}>
-            <CategoryPie
-              data={stats.pie}
-              currency={currency}
-              total={stats.expenses}
-            />
-          </div>
-
-          {/* KPI fintech */}
-          <div className="kpigrid" style={{ marginTop: 14 }}>
-            <div className="kpi">
-              <div className="label">📉 Uscite</div>
-              <div className="value neg">{formatMoney(stats.expenses, currency)}</div>
-              {prevTotal > 0 && (
-                <div className="sub">
-                  <span className={stats.deltaPct <= 0 ? "pos" : "neg"}>
-                    {formatPct(stats.deltaPct)}
-                  </span>{" "}
-                  vs precedente
-                </div>
-              )}
-            </div>
-            <div className="kpi">
-              <div className="label">📈 Entrate</div>
-              <div className="value pos">{formatMoney(stats.income, currency)}</div>
-            </div>
-            <div className="kpi">
-              <div className="label">💰 Saldo netto</div>
-              <div className={`value ${stats.net >= 0 ? "pos" : "neg"}`}>
-                {formatMoney(stats.net, currency)}
-              </div>
-            </div>
-            <div className="kpi">
-              <div className="label">📅 Media / giorno</div>
-              <div className="value">{formatMoney(stats.perDay, currency)}</div>
-              <div className="sub">
-                {stats.progress.elapsed}/{stats.progress.total} giorni
-              </div>
-            </div>
-            {stats.topCategory && (
-              <div className="kpi">
-                <div className="label">🏆 Categoria top</div>
-                <div className="value" style={{ fontSize: 18 }}>
-                  {stats.topCategory.icon} {stats.topCategory.name}
-                </div>
-                <div className="sub">
-                  {formatMoney(stats.topCategory.value, currency)}
-                </div>
-              </div>
-            )}
-            <div className="kpi">
-              <div className="label">🔢 Transazioni</div>
-              <div className="value">{stats.count}</div>
-            </div>
-            <div className="kpi">
-              <div className="label">📌 Spese fisse</div>
-              <div className="value">{formatMoney(stats.fixed, currency)}</div>
-              <div className="sub">
-                {stats.expenses ? Math.round((stats.fixed / stats.expenses) * 100) : 0}% delle
-                uscite
-              </div>
-            </div>
-            {stats.progress.isCurrent && stats.projection > 0 && (
-              <div className="kpi big">
-                <div className="label">🔮 Proiezione fine periodo</div>
-                <div className="value">{formatMoney(stats.projection, currency)}</div>
-                <div className="sub">
-                  stima basata sulla media giornaliera attuale
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Regola 50/30/20 */}
-          {stats.expenses > 0 && (
-            <div className="card" style={{ marginTop: 14 }}>
-              <div
-                className="label"
-                style={{ fontSize: 13, color: "var(--muted)", marginBottom: 12 }}
-              >
-                Regola 50/30/20
-              </div>
-              {[
-                { k: "needs", label: "Bisogni", target: 50, color: "#ef4444" },
-                { k: "wants", label: "Desideri", target: 30, color: "#f59e0b" },
-                { k: "savings", label: "Risparmio", target: 20, color: "#22c55e" },
-              ].map((row) => {
-                const val = stats.buckets[row.k] || 0;
-                const pct = stats.expenses ? (val / stats.expenses) * 100 : 0;
-                return (
-                  <div key={row.k} style={{ marginBottom: 12 }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        fontSize: 13,
-                        marginBottom: 5,
-                      }}
-                    >
-                      <span>{row.label}</span>
-                      <span>
-                        <strong>{pct.toFixed(0)}%</strong>
-                        <span style={{ color: "var(--muted)" }}>
-                          {" "}
-                          / {row.target}% · {formatMoney(val, currency)}
-                        </span>
-                      </span>
-                    </div>
-                    <div className="track">
-                      <div
-                        className="fill"
-                        style={{
-                          width: `${Math.min(100, pct)}%`,
-                          background: row.color,
-                        }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-              {stats.buckets.utility > 0 && (
-                <div style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 4 }}>
-                  Utility / non categorizzate:{" "}
-                  {formatMoney(stats.buckets.utility, currency)}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Ripartizione per banca */}
-          {stats.byBank.length > 0 && (
-            <div className="card" style={{ marginTop: 14 }}>
-              <div className="label" style={{ fontSize: 13, color: "var(--muted)" }}>
-                Uscite per banca
-              </div>
-              <div className="legend">
-                {stats.byBank.map((b, i) => (
-                  <div className="legrow" key={i}>
-                    <span className="legname">🏦 {b.name}</span>
-                    <span className="legval">{formatMoney(b.value, currency)}</span>
-                    <span className="legpct">
-                      {stats.expenses ? Math.round((b.value / stats.expenses) * 100) : 0}%
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </>
+        <DashboardView stats={stats} daily={daily} insights={insights} currency={currency} />
       )}
     </div>
   );
 }
 
+/* ===================== Calcoli ===================== */
+
 const EXPENSE_BUCKETS = new Set(["needs", "wants", "savings", "utility"]);
 
-// Bucket di una transazione; se non categorizzata: uscita→utility, entrata→income.
 function bucketOf(t) {
   const b = t.categories?.bucket;
   if (b) return b;
   return Number(t.amount) < 0 ? "utility" : "income";
 }
 
-// Spesa NETTA: per ogni categoria di spesa somma gli importi con segno
-// (i rimborsi positivi riducono la spesa) e azzera i negativi; esclude i
-// trasferimenti interni e le entrate.
 function netExpenses(txs) {
   const perCat = new Map();
   for (const t of txs) {
@@ -266,24 +116,49 @@ function netExpenses(txs) {
   return total;
 }
 
+// Serie giornaliera cumulata delle uscite nel periodo (fino a oggi se corrente).
+function buildDaily(txs, range) {
+  const start = new Date(range.start);
+  const now = new Date();
+  const end = new Date(Math.min(range.end.getTime(), now.getTime() + 24 * 3600 * 1000));
+  if (end <= start) return [];
+  const perDay = new Map();
+  for (const t of txs) {
+    const b = bucketOf(t);
+    if (b === "transfer" || b === "income") continue;
+    if (Number(t.amount) >= 0) continue;
+    const d = t.value_date || t.booking_date;
+    if (!d) continue;
+    perDay.set(d, (perDay.get(d) || 0) + Math.abs(Number(t.amount)));
+  }
+  const out = [];
+  let cum = 0;
+  for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+    const key = toDateStr(d);
+    const spent = perDay.get(key) || 0;
+    cum += spent;
+    out.push({ date: key, spent, cum });
+  }
+  return out;
+}
+
 function computeStats(txs, range, prevTotal) {
-  const catMap = new Map(); // id -> { name, color, icon, net }
+  const catMap = new Map();
   const bucketNet = { needs: 0, wants: 0, savings: 0, utility: 0 };
-  const bankMap = new Map(); // banca -> net
+  const bankMap = new Map();
   let income = 0;
   let count = 0;
-  let fixed = 0; // spese fisse (uscite marcate come ricorrenti)
+  let fixed = 0;
 
   for (const t of txs) {
     const b = bucketOf(t);
-    if (b === "transfer") continue; // giroconti interni: esclusi
+    if (b === "transfer") continue;
     count++;
     if (b === "income") {
       if (Number(t.amount) > 0) income += Number(t.amount);
       continue;
     }
     if (t.is_fixed && Number(t.amount) < 0) fixed += Math.abs(Number(t.amount));
-    // categoria di spesa: accumula il netto (i rimborsi positivi scalano la spesa)
     const cat = t.categories;
     const key = cat?.id || "none";
     const cur =
@@ -297,7 +172,7 @@ function computeStats(txs, range, prevTotal) {
     catMap.set(key, cur);
     const bk = EXPENSE_BUCKETS.has(b) ? b : "utility";
     bucketNet[bk] += Number(t.amount);
-    const bank = t.bank_connections?.institution_name || "Altro";
+    const bank = t.bank_connections?.institution_name || "Contanti";
     bankMap.set(bank, (bankMap.get(bank) || 0) + Number(t.amount));
   }
 
@@ -325,20 +200,51 @@ function computeStats(txs, range, prevTotal) {
   const projection = progress.isCurrent ? perDay * progress.total : 0;
   const deltaPct = prevTotal > 0 ? ((expenses - prevTotal) / prevTotal) * 100 : 0;
   const net = income - expenses;
+  const savingsRate = income > 0 ? (net / income) * 100 : 0;
 
   return {
-    expenses,
-    income,
-    net,
-    fixed,
-    pie,
-    topCategory,
-    byBank,
-    buckets,
-    count,
-    progress,
-    perDay,
-    projection,
-    deltaPct,
+    expenses, income, net, savingsRate, fixed, pie, topCategory, byBank,
+    buckets, count, progress, perDay, projection, deltaPct, prevTotal,
   };
+}
+
+// Commenti sintetici sui dati (icone Lucide).
+function buildInsights(s, currency, period) {
+  const out = [];
+  const m = (v) => formatMoney(v, currency);
+  const periodWord = period === "month" ? "mese" : period === "quarter" ? "trimestre" : period === "semester" ? "semestre" : "anno";
+
+  if (s.prevTotal > 0) {
+    const d = Math.round(s.deltaPct);
+    if (d <= -5) out.push({ tone: "good", Icon: PartyPopper, text: `Stai spendendo il <b>${Math.abs(d)}% in meno</b> rispetto al ${periodWord} precedente (${m(s.expenses)} vs ${m(s.prevTotal)}).` });
+    else if (d >= 5) out.push({ tone: "warn", Icon: TrendingUp, text: `Stai spendendo il <b>${d}% in più</b> rispetto al ${periodWord} precedente (${m(s.expenses)} vs ${m(s.prevTotal)}).` });
+    else out.push({ tone: "neutral", Icon: Minus, text: `Spesa <b>in linea</b> col ${periodWord} precedente (${m(s.expenses)}).` });
+  }
+
+  if (s.progress.isCurrent && s.projection > 0) {
+    const daysLeft = s.progress.total - s.progress.elapsed;
+    if (s.prevTotal > 0 && s.projection > s.prevTotal * 1.1)
+      out.push({ tone: "bad", Icon: Telescope, text: `A questo ritmo chiuderai il ${periodWord} a <b>~${m(s.projection)}</b>, oltre il periodo scorso. Restano ${daysLeft} giorni.` });
+    else
+      out.push({ tone: "neutral", Icon: Telescope, text: `A questo ritmo chiuderai il ${periodWord} intorno a <b>${m(s.projection)}</b> (${daysLeft} giorni alla fine).` });
+  }
+
+  if (s.income > 0) {
+    const r = Math.round(s.savingsRate);
+    if (r >= 20) out.push({ tone: "good", Icon: PiggyBank, text: `Ottimo: stai risparmiando il <b>${r}%</b> delle entrate (${m(s.net)}).` });
+    else if (r >= 0) out.push({ tone: "warn", Icon: Target, text: `Stai risparmiando il <b>${r}%</b> delle entrate: sotto la soglia consigliata del 20%.` });
+    else out.push({ tone: "bad", Icon: TriangleAlert, text: `Stai spendendo <b>più di quanto entra</b> (${m(-s.net)} in rosso nel ${periodWord}).` });
+  }
+
+  if (s.topCategory && s.expenses > 0) {
+    const pct = Math.round((s.topCategory.value / s.expenses) * 100);
+    out.push({ tone: "neutral", Icon: Trophy, text: `<b>${s.topCategory.name}</b> è la voce più pesante: ${m(s.topCategory.value)} (${pct}% delle uscite).` });
+  }
+
+  if (s.fixed > 0 && s.expenses > 0) {
+    const pct = Math.round((s.fixed / s.expenses) * 100);
+    out.push({ tone: "neutral", Icon: Pin, text: `Le spese fisse pesano <b>${pct}%</b> delle uscite (${m(s.fixed)}): la parte su cui hai meno margine.` });
+  }
+
+  return out.slice(0, 5);
 }

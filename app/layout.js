@@ -9,7 +9,7 @@ export const metadata = {
 };
 
 export const viewport = {
-  themeColor: "#0f1117",
+  themeColor: "#0a0d0f",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -19,6 +19,12 @@ export default function RootLayout({ children }) {
   return (
     <html lang="it">
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap"
+        />
         <link rel="apple-touch-icon" href="/icon-192.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta

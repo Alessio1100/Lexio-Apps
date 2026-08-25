@@ -5,6 +5,9 @@ import PeriodBar from "../../components/PeriodBar";
 import { api } from "../../lib/api";
 import { getPeriodRange, toDateStr } from "../../lib/periods";
 import { formatMoney, formatDateLong } from "../../lib/format";
+import { catColor } from "../../lib/colors";
+import { CatIcon } from "../../lib/icons";
+import { Plus, Pin } from "lucide-react";
 
 export default function TransazioniPage() {
   const [settings, setSettings] = useState(null);
@@ -134,7 +137,7 @@ export default function TransazioniPage() {
           <div className="pagesub">Tutte le transazioni</div>
         </div>
         <button className="btn" onClick={() => setAdding(true)}>
-          + Aggiungi
+          <Plus size={17} /> Aggiungi
         </button>
       </header>
 
@@ -333,7 +336,7 @@ function AddExpenseModal({ categories, onClose, onSave }) {
 
 function TxRow({ tx, currency, onClick }) {
   const cat = tx.categories;
-  const color = cat?.color || "#71717a";
+  const color = cat ? catColor(cat) : "#71717a";
   const amount = Number(tx.amount);
   const bank = tx.bank_connections?.institution_name || "";
   return (
@@ -346,12 +349,14 @@ function TxRow({ tx, currency, onClick }) {
         className="txicon"
         style={{ background: `${color}22`, color }}
       >
-        {cat?.icon || "❓"}
+        <CatIcon name={cat?.name} size={19} />
       </span>
       <span className="txbody">
-        <span className="txname">
-          {tx.is_fixed && <span title="Spesa fissa">📌 </span>}
-          {tx.display_name || tx.merchant_name || tx.description || "Transazione"}
+        <span className="txname" style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          {tx.is_fixed && <Pin size={12} style={{ color: "var(--amber)", flexShrink: 0 }} />}
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+            {tx.display_name || tx.merchant_name || tx.description || "Transazione"}
+          </span>
         </span>
         <span className="txmeta">
           <span>{cat?.name || "Non categorizzata"}</span>
@@ -416,7 +421,7 @@ function CategoryModal({ tx, categories, currency, onClose, onAssign, onToggleFi
               }}
               onClick={() => onAssign(c.id, false)}
             >
-              <span style={{ marginRight: 6 }}>{c.icon}</span>
+              <CatIcon name={c.name} size={16} color={catColor(c)} style={{ marginRight: 8, flexShrink: 0 }} />
               {c.name}
             </button>
           ))}

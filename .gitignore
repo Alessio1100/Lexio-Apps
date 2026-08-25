@@ -4,3 +4,5 @@ out
 .DS_Store
 *.log
 .env*
+# tooling locale di design/skill e config dev: non serve al runtime dell'app
+.claude/
