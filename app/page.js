@@ -87,7 +87,7 @@ export default function Dashboard() {
       {loading ? (
         <div className="spinner">Caricamento…</div>
       ) : (
-        <DashboardView stats={stats} daily={daily} insights={insights} currency={currency} />
+        <DashboardView stats={stats} daily={daily} insights={insights} currency={currency} period={period} refDate={refDate} />
       )}
     </div>
   );
@@ -163,6 +163,7 @@ function computeStats(txs, range, prevTotal) {
     const key = cat?.id || "none";
     const cur =
       catMap.get(key) || {
+        id: cat?.id || null,
         name: cat?.name || "Non categorizzata",
         color: cat?.color || "#71717a",
         icon: cat?.icon || "",
@@ -177,7 +178,7 @@ function computeStats(txs, range, prevTotal) {
   }
 
   const pie = [...catMap.values()]
-    .map((c) => ({ name: c.name, color: c.color, icon: c.icon, value: Math.max(0, -c.net) }))
+    .map((c) => ({ id: c.id, name: c.name, color: c.color, icon: c.icon, value: Math.max(0, -c.net) }))
     .filter((c) => c.value > 0.005)
     .sort((a, b) => b.value - a.value);
   const expenses = pie.reduce((a, c) => a + c.value, 0);

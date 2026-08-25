@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { PieChart, Pie, Cell, ResponsiveContainer, Sector } from "recharts";
 import { formatMoney } from "../lib/format";
+import { toDateStr } from "../lib/periods";
 import { catColor, OTHER_COLOR } from "../lib/colors";
 import { CatIcon } from "../lib/icons";
 
@@ -41,15 +43,34 @@ function ActiveShape(props) {
   );
 }
 
-export default function CategoryPie({ data, currency, total }) {
+export default function CategoryPie({ data, currency, total, period, refDate }) {
   const slices = prepare(data);
   const [active, setActive] = useState(-1);
+  const router = useRouter();
 
   if (!slices.length) {
     return <div className="empty">Nessuna spesa nel periodo selezionato.</div>;
   }
 
   const focus = active >= 0 ? slices[active] : null;
+
+  // Primo click: seleziona la fetta. Secondo click sulla stessa: apre la pagina
+  // Spese filtrata per quella categoria nello stesso periodo.
+  function goOrActivate(i) {
+    const s = slices[i];
+    if (!s || s.isOther || !s.id) {
+      setActive((a) => (a === i ? -1 : i));
+      return;
+    }
+    if (active === i) {
+      const params = new URLSearchParams({ category: s.id });
+      if (period) params.set("period", period);
+      if (refDate) params.set("ref", toDateStr(refDate));
+      router.push(`/transazioni?${params.toString()}`);
+    } else {
+      setActive(i);
+    }
+  }
 
   return (
     <div>
@@ -69,6 +90,8 @@ export default function CategoryPie({ data, currency, total }) {
               activeShape={ActiveShape}
               onMouseEnter={(_, i) => setActive(i)}
               onMouseLeave={() => setActive(-1)}
+              onClick={(_, i) => goOrActivate(i)}
+              style={{ cursor: "pointer" }}
               isAnimationActive
             >
               {slices.map((d, i) => (
@@ -123,9 +146,12 @@ export default function CategoryPie({ data, currency, total }) {
             <div
               className="legrow"
               key={i}
+              role="button"
               onMouseEnter={() => setActive(i)}
               onMouseLeave={() => setActive(-1)}
-              style={{ opacity: active === -1 || active === i ? 1 : 0.5 }}
+              onClick={() => goOrActivate(i)}
+              title={d.isOther || !d.id ? undefined : "Tocca di nuovo per aprire in Spese"}
+              style={{ opacity: active === -1 || active === i ? 1 : 0.5, cursor: "pointer" }}
             >
               <span className="leg-ic" style={{ background: `${d.color}22`, color: d.color }}>
                 <CatIcon name={d.name} size={15} />
@@ -136,6 +162,9 @@ export default function CategoryPie({ data, currency, total }) {
             </div>
           );
         })}
+      </div>
+      <div style={{ fontSize: 11, color: "var(--muted-2)", textAlign: "center", marginTop: 6 }}>
+        Tocca una categoria, poi di nuovo per aprirla in Spese
       </div>
     </div>
   );

@@ -13,7 +13,7 @@ import { catColor } from "../lib/colors";
 import { CatIcon } from "../lib/icons";
 
 // Vista presentazionale della dashboard: riceve stats/daily/insights già calcolati.
-export default function DashboardView({ stats, daily, insights, currency }) {
+export default function DashboardView({ stats, daily, insights, currency, period, refDate }) {
   return (
     <div className="dash">
       {/* ---- KPI: Uscite / Entrate ---- */}
@@ -43,7 +43,7 @@ export default function DashboardView({ stats, daily, insights, currency }) {
       {/* ---- Torta categorie (mobile: tra le due coppie di KPI; desktop: sotto i 4) ---- */}
       <div className="card span-5 pos-pie">
         <div className="card-title"><PieIcon size={15} /> Uscite per categoria</div>
-        <CategoryPie data={stats.pie} currency={currency} total={stats.expenses} />
+        <CategoryPie data={stats.pie} currency={currency} total={stats.expenses} period={period} refDate={refDate} />
       </div>
 
       {/* ---- KPI: Tasso di risparmio / Proiezione ---- */}

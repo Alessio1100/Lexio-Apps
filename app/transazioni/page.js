@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import PeriodBar from "../../components/PeriodBar";
 import { api } from "../../lib/api";
 import { getPeriodRange, toDateStr } from "../../lib/periods";
 import { formatMoney, formatDateLong } from "../../lib/format";
 import { catColor } from "../../lib/colors";
 import { CatIcon } from "../../lib/icons";
-import { Plus, Pin } from "lucide-react";
+import { Plus, Pin, ListFilter } from "lucide-react";
 
 export default function TransazioniPage() {
   const [settings, setSettings] = useState(null);
@@ -22,6 +22,28 @@ export default function TransazioniPage() {
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState(null);
   const [adding, setAdding] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const urlPeriod = useRef(false); // periodo impostato da URL (arrivo dal grafico)
+
+  // Filtro/periodo iniziali da querystring (link dalla torta della dashboard).
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const cat = sp.get("category");
+    const per = sp.get("period");
+    const ref = sp.get("ref");
+    if (cat) {
+      setFCat(cat);
+      setShowFilters(true);
+    }
+    if (per) {
+      setPeriod(per);
+      urlPeriod.current = true;
+    }
+    if (ref) {
+      const d = new Date(`${ref}T12:00:00`);
+      if (!isNaN(d)) setRefDate(d);
+    }
+  }, []);
 
   useEffect(() => {
     Promise.all([
@@ -30,7 +52,7 @@ export default function TransazioniPage() {
       api.get("/api/enablebanking/connections").catch(() => []),
     ]).then(([s, c, conn]) => {
       setSettings(s);
-      if (s?.default_period) setPeriod(s.default_period);
+      if (s?.default_period && !urlPeriod.current) setPeriod(s.default_period);
       setCategories(c || []);
       setConnections(conn || []);
     });
@@ -150,8 +172,8 @@ export default function TransazioniPage() {
         anchors={anchors}
       />
 
-      {/* filtri */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
+      {/* filtri: ricerca + pulsante che mostra/nasconde i due filtri */}
+      <div className="filterbar">
         <input
           className="input"
           placeholder="Cerca…"
@@ -159,34 +181,44 @@ export default function TransazioniPage() {
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && reload()}
         />
-      </div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 4 }}>
-        <select
-          className="select"
-          value={fCat}
-          onChange={(e) => setFCat(e.target.value)}
+        <button
+          className={`filterbtn ${showFilters ? "active" : ""}`}
+          onClick={() => setShowFilters((v) => !v)}
+          aria-label="Filtri"
         >
-          <option value="">Tutte le categorie</option>
-          <option value="none">Non categorizzate</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.icon} {c.name}
-            </option>
-          ))}
-        </select>
-        <select
-          className="select"
-          value={fConn}
-          onChange={(e) => setFConn(e.target.value)}
-        >
-          <option value="">Tutte le banche</option>
-          {connections.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.institution_name}
-            </option>
-          ))}
-        </select>
+          <ListFilter size={18} />
+          {(fCat || fConn) && <span className="fdot" />}
+        </button>
       </div>
+      {showFilters && (
+        <div className="filterpanel">
+          <select
+            className="select"
+            value={fCat}
+            onChange={(e) => setFCat(e.target.value)}
+          >
+            <option value="">Tutte le categorie</option>
+            <option value="none">Non categorizzate</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.icon} {c.name}
+              </option>
+            ))}
+          </select>
+          <select
+            className="select"
+            value={fConn}
+            onChange={(e) => setFConn(e.target.value)}
+          >
+            <option value="">Tutte le banche</option>
+            {connections.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.institution_name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {loading ? (
         <div className="spinner">Caricamento…</div>

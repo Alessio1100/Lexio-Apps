@@ -249,30 +249,63 @@ svg { display: block; }
   color: var(--brand-soft);
 }
 
-/* ---------- Selettore periodo ---------- */
+/* ---------- Chip periodo (una sola riga, mai a capo) ---------- */
+.periodchips {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.pchip {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: -0.2px;
+  padding: 6px 5px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: 0.16s;
+}
+.pchip:hover { color: var(--text); border-color: var(--elevated); }
+.pchip.active {
+  background: var(--brand-dim);
+  border-color: rgba(16, 185, 129, 0.5);
+  color: var(--brand-soft);
+}
+
+/* ---------- Switch periodo: barra unica con chevron ---------- */
 .periodnav {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin: 14px 0;
-}
-.periodnav .arrow {
-  width: 40px;
-  height: 40px;
-  border-radius: 13px;
+  gap: 4px;
+  margin: 0 0 12px;
+  padding: 3px;
   background: var(--surface);
   border: 1px solid var(--border);
-  color: var(--text);
+  border-radius: 12px;
+}
+.periodnav .pstep {
+  width: 38px;
+  height: 30px;
   display: grid;
   place-items: center;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
   transition: 0.16s;
 }
-.periodnav .arrow:hover { background: var(--elevated); color: var(--brand-soft); }
+.periodnav .pstep:hover { background: var(--surface-2); color: var(--brand-soft); }
+.periodnav .pstep:active { transform: scale(0.94); }
 .periodnav .plabel {
   flex: 1;
   text-align: center;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   font-family: var(--font-display);
   letter-spacing: -0.2px;
@@ -337,6 +370,44 @@ svg { display: block; }
   color: var(--muted);
   margin-bottom: 6px;
 }
+
+/* ---------- Barra filtri (ricerca + toggle) ---------- */
+.filterbar { display: flex; gap: 8px; margin-bottom: 8px; }
+.filterbar .input { flex: 1; }
+.filterbtn {
+  flex: 0 0 auto;
+  width: 48px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  position: relative;
+  transition: 0.16s;
+}
+.filterbtn:hover { color: var(--text); border-color: var(--elevated); }
+.filterbtn.active {
+  background: var(--brand-dim);
+  border-color: rgba(16, 185, 129, 0.5);
+  color: var(--brand-soft);
+}
+.filterbtn .fdot {
+  position: absolute;
+  top: 8px;
+  right: 9px;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--brand-soft);
+}
+.filterpanel {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  animation: rise 0.2s ease both;
+}
+.filterpanel .select { flex: 1; min-width: 0; }
 
 /* ---------- Lista transazioni ---------- */
 .daygroup { margin-top: 20px; }
@@ -598,7 +669,9 @@ svg { display: block; }
 
   .modal-backdrop { align-items: center; }
   .modal { border-radius: 22px; max-width: 560px; animation: pop 0.22s ease both; }
-  .periodnav { max-width: 440px; }
+  .periodchips { max-width: 460px; }
+  .periodnav { max-width: 460px; }
+  .pchip { padding: 8px 14px; font-size: 13px; letter-spacing: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
