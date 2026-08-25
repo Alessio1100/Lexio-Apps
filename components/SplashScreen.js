@@ -1,31 +1,39 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
-// Splash del primo caricamento di sessione: sfondo pieno + logo Q centrato
-// mentre carica; quando i dati sono pronti la Q "diventa" la scritta Quadra
-// (Q = logo), poi l'overlay sfuma rivelando la Home.
+// Splash del primo caricamento di sessione: sfondo pieno + logo Q centrato.
+// L'animazione (Q -> "Quadra") parte presto, su un suo tempo (di solito PRIMA
+// che il caricamento finisca), ed è lenta/naturale. Si sfuma verso la Home solo
+// quando l'animazione è completa E i dati sono pronti.
 export default function SplashScreen({ ready, onDone }) {
   const [phase, setPhase] = useState("loading"); // loading | reveal | out
-  const mountedAt = useRef(Date.now());
+  const [revealDone, setRevealDone] = useState(false);
 
+  // avvia l'animazione presto, a prescindere dal caricamento
   useEffect(() => {
-    if (!ready) return;
-    // mostra il logo per un minimo, così l'animazione non "lampeggia"
-    const wait = Math.max(0, 620 - (Date.now() - mountedAt.current));
-    const t = setTimeout(() => setPhase("reveal"), wait);
+    const t = setTimeout(() => setPhase("reveal"), 450);
     return () => clearTimeout(t);
-  }, [ready]);
+  }, []);
+
+  // durata dell'animazione di reveal (lenta) prima di poter uscire
+  useEffect(() => {
+    if (phase !== "reveal") return;
+    const t = setTimeout(() => setRevealDone(true), 1000);
+    return () => clearTimeout(t);
+  }, [phase]);
+
+  // esci (rivela la Home) solo quando animazione finita E dati pronti
+  useEffect(() => {
+    if (phase === "out" || !revealDone || !ready) return;
+    const t = setTimeout(() => setPhase("out"), 300); // breve pausa sul wordmark
+    return () => clearTimeout(t);
+  }, [revealDone, ready, phase]);
 
   useEffect(() => {
-    if (phase === "reveal") {
-      const t = setTimeout(() => setPhase("out"), 900);
-      return () => clearTimeout(t);
-    }
-    if (phase === "out") {
-      const t = setTimeout(() => onDone && onDone(), 480);
-      return () => clearTimeout(t);
-    }
+    if (phase !== "out") return;
+    const t = setTimeout(() => onDone && onDone(), 620); // fade più lento
+    return () => clearTimeout(t);
   }, [phase, onDone]);
 
   return (

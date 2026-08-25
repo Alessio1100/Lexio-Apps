@@ -596,7 +596,7 @@ svg { display: block; }
     radial-gradient(900px 560px at -6% -10%, rgba(16, 185, 129, 0.14), transparent 58%),
     var(--bg);
   opacity: 1;
-  transition: opacity 0.48s ease;
+  transition: opacity 0.62s ease;
 }
 .splash-out { opacity: 0; pointer-events: none; }
 .splash-mark {
@@ -611,7 +611,7 @@ svg { display: block; }
   place-items: center;
   flex-shrink: 0;
 }
-.splash-mark:not(.reveal) .splash-q { animation: qpulse 1.4s ease-in-out infinite; }
+.splash-mark:not(.reveal) .splash-q { animation: qpulse 1.7s ease-in-out infinite; }
 .splash-word {
   font-family: var(--font-display);
   font-weight: 800;
@@ -623,9 +623,9 @@ svg { display: block; }
   max-width: 0;
   opacity: 0;
   margin-left: -0.28em;
-  transform: translateX(-6px);
-  transition: max-width 0.55s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 0.4s ease 0.06s, transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  transform: translateX(-10px);
+  transition: max-width 0.85s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.6s ease 0.1s, transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .splash-mark.reveal .splash-word {
   max-width: 3.4em;
