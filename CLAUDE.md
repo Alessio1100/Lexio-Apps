@@ -11,7 +11,9 @@ App **personale** di monitoraggio spese con **open banking**. Aggrega i conti de
 (**BuddyBank** e **Revolut**), classifica automaticamente le transazioni e mostra dashboard con KPI.
 Utente unico (Alessio). Lingua UI: **italiano**. Valuta: **EUR**.
 
-- Produzione: **https://lexio-apps.vercel.app**
+- Nome app (branding): **Quadra** (logo: anello smeraldo→ciano con spicchio ambra e coda = Q).
+- Produzione: **https://quadra-counts.vercel.app** (ex `lexio-apps.vercel.app`, ora rimosso).
+  Progetto Vercel ancora chiamato `lexio-apps`, repo GitHub ancora `Lexio-Apps`.
 - Repo GitHub: **github.com/Alessio1100/Lexio-Apps**, branch **main**
 - L'app è mono-utente ma con auth reale (Supabase) e RLS per sicurezza.
 
@@ -62,7 +64,10 @@ middleware.js        protegge le pagine (redirect a /login), lascia pubbliche /p
 - **Vercel**: team `alessiotorroni00-4048s-projects`, progetto `lexio-apps` (auto-deploy su push a `main`).
 - **Supabase**: project ref `uviynusezmykpbeohqsc` (region Francoforte). Auth: conferma email **disattivata**.
 - **Enable Banking**: app **Production** `65cbefb6-c7fa-45a0-91f4-57e625ce0676`. Stato "Restricted/attiva"
-  (attivata collegando i conti propri dell'utente). Redirect: `https://lexio-apps.vercel.app/api/enablebanking/callback`.
+  (attivata collegando i conti propri dell'utente). Redirect registrato: `https://lexio-apps.vercel.app/api/enablebanking/callback`.
+  ⚠️ **PUNTO APERTO**: il dominio è cambiato in `quadra-counts.vercel.app` ma il redirect su Enable Banking
+  e la env `NEXT_PUBLIC_APP_URL` puntano ancora a `lexio-apps.vercel.app` (ora 404) → **nuovi collegamenti/rinnovi
+  banca NON funzionano** finché non si allineano (il sync delle banche già collegate continua via cron). Da sistemare.
 - **Gemini**: modello `gemini-3.6-flash` (2.5-flash è bloccato per i nuovi utenti). Chiave AI Studio (formato `AQ.…`).
 
 ### Variabili d'ambiente (in `.env.local` locale + Env di Vercel; MAI committate)
