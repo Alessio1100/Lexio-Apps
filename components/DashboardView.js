@@ -1,11 +1,11 @@
 "use client";
 
 import {
-  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine,
+  AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
 } from "recharts";
 import {
-  TrendingDown, TrendingUp, PiggyBank, Telescope, Lightbulb, PieChart as PieIcon,
-  Activity, Trophy, Scale, Landmark, Pin, ArrowUp, ArrowDown, Minus,
+  TrendingDown, TrendingUp, PiggyBank, Lightbulb, PieChart as PieIcon,
+  Activity, Trophy, Scale, Landmark, Pin, ArrowUp, ArrowDown, Minus, BarChart3,
 } from "lucide-react";
 import CategoryPie from "./CategoryPie";
 import { formatMoney, formatMoneyShort, formatPct, formatDateShort } from "../lib/format";
@@ -13,7 +13,7 @@ import { catColor } from "../lib/colors";
 import { CatIcon } from "../lib/icons";
 
 // Vista presentazionale della dashboard: riceve stats/daily/insights già calcolati.
-export default function DashboardView({ stats, daily, insights, currency, period, refDate }) {
+export default function DashboardView({ stats, daily, monthly, insights, currency, period, refDate }) {
   return (
     <div className="dash">
       {/* ---- KPI: Uscite / Entrate ---- */}
@@ -63,26 +63,28 @@ export default function DashboardView({ stats, daily, insights, currency, period
         </div>
         <div className="kpi">
           <div className="khead">
-            <span className="ic-chip tint-amber"><Telescope size={17} /></span> Proiezione
+            <span className="ic-chip tint-amber"><Pin size={17} /></span> Spese fisse
           </div>
-          <div className="value money">
-            {stats.progress.isCurrent && stats.projection > 0
-              ? formatMoneyShort(stats.projection, currency)
-              : formatMoneyShort(stats.expenses, currency)}
-          </div>
+          <div className="value money">{formatMoney(stats.fixed, currency)}</div>
           <div className="sub">
-            {stats.progress.isCurrent
-              ? `${stats.progress.total - stats.progress.elapsed} giorni alla fine · media ${formatMoney(stats.perDay, currency)}/g`
-              : "periodo concluso"}
+            {stats.expenses ? Math.round((stats.fixed / stats.expenses) * 100) : 0}% delle uscite · variabili {formatMoney(Math.max(0, stats.expenses - stats.fixed), currency)}
           </div>
         </div>
       </div>
 
       {/* ---- Andamento ---- */}
       <div className="card span-7 pos-trend">
-        <div className="card-title"><Activity size={15} /> Andamento spesa cumulata</div>
-        <SpendTrend daily={daily} currency={currency} projection={stats.projection} isCurrent={stats.progress.isCurrent} />
+        <div className="card-title"><Activity size={15} /> Spesa giornaliera</div>
+        <SpendTrend daily={daily} currency={currency} />
       </div>
+
+      {/* ---- Istogramma spese per mese (anno in corso) ---- */}
+      {monthly && monthly.length > 0 && (
+        <div className="card span-12 pos-months">
+          <div className="card-title"><BarChart3 size={15} /> Spese per mese · anno in corso</div>
+          <MonthlyBars data={monthly} currency={currency} />
+        </div>
+      )}
 
       {/* ---- Insight ---- */}
       {insights.length > 0 && (
@@ -141,9 +143,9 @@ export default function DashboardView({ stats, daily, insights, currency, period
         </div>
       )}
 
-      {/* ---- Per banca ---- */}
+      {/* ---- Per banca (a tutta larghezza in fondo) ---- */}
       {stats.byBank.length > 0 && (
-        <div className="card span-6 pos-bank">
+        <div className="card span-12 pos-bank">
           <div className="card-title"><Landmark size={15} /> Uscite per banca</div>
           <div className="legend">
             {stats.byBank.map((b, i) => {
@@ -163,24 +165,6 @@ export default function DashboardView({ stats, daily, insights, currency, period
         </div>
       )}
 
-      {/* ---- Spese fisse ---- */}
-      <div className="card span-6 pos-fixed">
-        <div className="card-title"><Pin size={15} /> Spese fisse</div>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-          <div className="money" style={{ fontFamily: "var(--font-display)", fontSize: 28, fontWeight: 800, letterSpacing: "-0.6px" }}>
-            {formatMoney(stats.fixed, currency)}
-          </div>
-          <div style={{ fontSize: 13, color: "var(--muted)" }}>
-            {stats.expenses ? Math.round((stats.fixed / stats.expenses) * 100) : 0}% delle uscite
-          </div>
-        </div>
-        <div className="track" style={{ marginTop: 12 }}>
-          <div className="fill" style={{ width: `${stats.expenses ? Math.min(100, (stats.fixed / stats.expenses) * 100) : 0}%` }} />
-        </div>
-        <div style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 10 }}>
-          Uscite variabili: {formatMoney(Math.max(0, stats.expenses - stats.fixed), currency)}
-        </div>
-      </div>
     </div>
   );
 }
@@ -198,19 +182,16 @@ function TrendTip({ active, payload, currency }) {
   return (
     <div className="chart-tip">
       <div className="t-label">{formatDateShort(p.date)}</div>
-      <div className="t-val">{formatMoney(p.cum, currency)}</div>
-      {p.spent > 0 && (
-        <div style={{ color: "var(--muted)", fontSize: 11 }}>+{formatMoney(p.spent, currency)} nel giorno</div>
-      )}
+      <div className="t-val">{formatMoney(p.spent, currency)}</div>
     </div>
   );
 }
 
-function SpendTrend({ daily, currency, projection, isCurrent }) {
+// Spesa giornaliera (non cumulata): una barra per ogni giorno del periodo.
+function SpendTrend({ daily, currency }) {
   if (!daily || daily.length < 2) {
     return <div className="empty" style={{ padding: "30px 10px" }}>Dati insufficienti per l'andamento.</div>;
   }
-  const maxCum = daily[daily.length - 1].cum;
   return (
     <div style={{ width: "100%", height: 210 }}>
       <ResponsiveContainer width="100%" height="100%">
@@ -224,11 +205,43 @@ function SpendTrend({ daily, currency, projection, isCurrent }) {
           <XAxis dataKey="date" tickFormatter={formatDateShort} tick={{ fill: "var(--muted-2)", fontSize: 10 }} axisLine={false} tickLine={false} minTickGap={28} />
           <YAxis tickFormatter={(v) => formatMoneyShort(v, currency)} tick={{ fill: "var(--muted-2)", fontSize: 10 }} axisLine={false} tickLine={false} width={60} />
           <Tooltip content={<TrendTip currency={currency} />} cursor={{ stroke: "var(--border)" }} />
-          {isCurrent && projection > maxCum && (
-            <ReferenceLine y={projection} stroke="var(--amber)" strokeDasharray="4 4" strokeOpacity={0.7} />
-          )}
-          <Area type="monotone" dataKey="cum" stroke="#34d399" strokeWidth={2.5} fill="url(#spendGrad)" isAnimationActive />
+          <Area type="monotone" dataKey="spent" stroke="#34d399" strokeWidth={2.5} fill="url(#spendGrad)" isAnimationActive />
         </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function MonthlyTip({ active, payload, currency }) {
+  if (!active || !payload || !payload.length) return null;
+  const p = payload[0].payload;
+  return (
+    <div className="chart-tip">
+      <div className="t-label">{p.month}</div>
+      <div className="t-val">{formatMoney(p.value, currency)}</div>
+    </div>
+  );
+}
+
+// Istogramma: una "torre" per ogni mese dell'anno in corso con la spesa totale del mese.
+function MonthlyBars({ data, currency }) {
+  const hasData = data.some((d) => d.value > 0.005);
+  if (!hasData) {
+    return <div className="empty" style={{ padding: "30px 10px" }}>Nessuna spesa registrata quest'anno.</div>;
+  }
+  return (
+    <div style={{ width: "100%", height: 240 }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+          <XAxis dataKey="month" tick={{ fill: "var(--muted-2)", fontSize: 11 }} axisLine={false} tickLine={false} />
+          <YAxis tickFormatter={(v) => formatMoneyShort(v, currency)} tick={{ fill: "var(--muted-2)", fontSize: 10 }} axisLine={false} tickLine={false} width={60} />
+          <Tooltip content={<MonthlyTip currency={currency} />} cursor={{ fill: "var(--surface-2)", opacity: 0.4 }} />
+          <Bar dataKey="value" radius={[4, 4, 0, 0]} isAnimationActive>
+            {data.map((d, i) => (
+              <Cell key={i} fill={i === data.length - 1 ? "#34d399" : "#0e9f6e"} />
+            ))}
+          </Bar>
+        </BarChart>
       </ResponsiveContainer>
     </div>
   );

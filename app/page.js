@@ -134,8 +134,28 @@ export default function Dashboard() {
       .finally(() => setLoading(false));
   }, [settings, period, refDate, day, range.start, range.end, syncTick]);
 
+  // Transazioni dell'anno in corso (da 1° gennaio a oggi) per l'istogramma mensile,
+  // indipendenti dal periodo selezionato.
+  const [yearTxs, setYearTxs] = useState([]);
+  useEffect(() => {
+    if (!settings) return;
+    const y = new Date().getFullYear();
+    const url = `/api/transactions?from=${y}-01-01&to=${toDateStr(new Date())}`;
+    const cached = getCache(url);
+    if (cached !== undefined) setYearTxs(cached);
+    api
+      .get(url)
+      .then((d) => {
+        const arr = d || [];
+        setCache(url, arr);
+        setYearTxs((old) => (sameTx(old, arr) ? old : arr));
+      })
+      .catch(() => {});
+  }, [settings, syncTick]);
+
   const stats = useMemo(() => computeStats(txs, range, prevTotal), [txs, range, prevTotal]);
   const daily = useMemo(() => buildDaily(txs, range), [txs, range]);
+  const monthly = useMemo(() => buildMonthly(yearTxs), [yearTxs]);
   const insights = useMemo(() => buildInsights(stats, currency, period), [stats, currency, period]);
 
   return (
@@ -159,7 +179,7 @@ export default function Dashboard() {
       {loading && txs.length === 0 ? (
         <div className="spinner">Caricamento…</div>
       ) : (
-        <DashboardView stats={stats} daily={daily} insights={insights} currency={currency} period={period} refDate={refDate} />
+        <DashboardView stats={stats} daily={daily} monthly={monthly} insights={insights} currency={currency} period={period} refDate={refDate} />
       )}
 
       {splash && (
@@ -222,6 +242,27 @@ function buildDaily(txs, range) {
     out.push({ date: key, spent, cum });
   }
   return out;
+}
+
+const MONTH_LABELS = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
+
+// Uscite nette totali per ogni mese dell'anno in corso (da gennaio al mese attuale).
+// Una "torre" per mese: valore = spesa del mese (netta per categoria, come netExpenses).
+function buildMonthly(txs) {
+  const now = new Date();
+  const year = now.getFullYear();
+  const lastMonth = now.getMonth(); // 0-based, incluso
+  const groups = Array.from({ length: lastMonth + 1 }, () => []);
+  for (const t of txs) {
+    const raw = t.value_date || t.booking_date;
+    if (!raw) continue;
+    const d = new Date(raw);
+    if (d.getFullYear() !== year) continue;
+    const mi = d.getMonth();
+    if (mi > lastMonth) continue;
+    groups[mi].push(t);
+  }
+  return groups.map((g, i) => ({ month: MONTH_LABELS[i], value: netExpenses(g) }));
 }
 
 function computeStats(txs, range, prevTotal) {

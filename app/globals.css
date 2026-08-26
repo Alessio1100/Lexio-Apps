@@ -708,12 +708,12 @@ svg { display: block; }
      L'ordine desktop differisce dal DOM (che è l'ordine mobile) via `order`. */
   .dash > .kpirow { grid-column: span 6; order: 0; gap: 14px; }
   .dash > .pos-pie { order: 1; }        /* torta (span-5) sotto i 4 KPI */
-  .dash > .pos-trend { order: 1; }      /* andamento (span-7) accanto */
+  .dash > .pos-trend { order: 1; }      /* spesa giornaliera (span-7) accanto */
   .dash > .pos-spend { order: 2; }      /* Dove vanno i soldi */
   .dash > .pos-5030 { order: 2; }       /* 50/30/20 */
-  .dash > .pos-insights { order: 3; }   /* Cosa dicono i dati → sotto */
-  .dash > .pos-bank { order: 4; }
-  .dash > .pos-fixed { order: 4; }
+  .dash > .pos-months { order: 3; }     /* Istogramma mensile (span-12) */
+  .dash > .pos-insights { order: 4; }   /* Cosa dicono i dati */
+  .dash > .pos-bank { order: 5; }       /* Uscite per banca (span-12) in fondo */
 
   .span-4 { grid-column: span 4; }
   .span-5 { grid-column: span 5; }
