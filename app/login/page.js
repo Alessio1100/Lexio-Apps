@@ -43,7 +43,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="wrap" style={{ justifyContent: "center", maxWidth: 420 }}>
+    <div
+      className="wrap"
+      style={{ justifyContent: "center", maxWidth: 420, marginLeft: "auto", marginRight: "auto" }}
+    >
       <div style={{ textAlign: "center", marginBottom: 26 }}>
         <div
           style={{

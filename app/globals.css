@@ -686,7 +686,9 @@ svg { display: block; }
 
   .wrap {
     max-width: 1200px;
-    margin-left: var(--nav-w);
+    /* Centra il contenuto nell'area a destra della nav fissa: su schermi larghi
+       (16:9) lo spazio extra si divide tra i due lati invece di accumularsi a destra. */
+    margin-left: calc(var(--nav-w) + max(0px, (100vw - var(--nav-w) - 1200px) / 2));
     margin-right: auto;
     padding: 32px 44px 44px;
   }
