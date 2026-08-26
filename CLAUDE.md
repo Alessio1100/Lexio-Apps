@@ -64,10 +64,10 @@ middleware.js        protegge le pagine (redirect a /login), lascia pubbliche /p
 - **Vercel**: team `alessiotorroni00-4048s-projects`, progetto `lexio-apps` (auto-deploy su push a `main`).
 - **Supabase**: project ref `uviynusezmykpbeohqsc` (region Francoforte). Auth: conferma email **disattivata**.
 - **Enable Banking**: app **Production** `65cbefb6-c7fa-45a0-91f4-57e625ce0676`. Stato "Restricted/attiva"
-  (attivata collegando i conti propri dell'utente). Redirect registrato: `https://lexio-apps.vercel.app/api/enablebanking/callback`.
-  ⚠️ **PUNTO APERTO**: il dominio è cambiato in `quadra-counts.vercel.app` ma il redirect su Enable Banking
-  e la env `NEXT_PUBLIC_APP_URL` puntano ancora a `lexio-apps.vercel.app` (ora 404) → **nuovi collegamenti/rinnovi
-  banca NON funzionano** finché non si allineano (il sync delle banche già collegate continua via cron). Da sistemare.
+  (attivata collegando i conti propri dell'utente). Redirect registrato: `https://quadra-counts.vercel.app/api/enablebanking/callback`
+  (allineato al nuovo dominio il 2026-08-26; anche privacy/termini puntano a quadra-counts). La env `NEXT_PUBLIC_APP_URL`
+  su Vercel = `https://quadra-counts.vercel.app` (ricreata come tipo **Config**: Vercel non accetta più `NEXT_PUBLIC_*` Secret).
+  → collegamento/rinnovo banche di nuovo funzionante.
 - **Gemini**: modello `gemini-3.6-flash` (2.5-flash è bloccato per i nuovi utenti). Chiave AI Studio (formato `AQ.…`).
 
 ### Variabili d'ambiente (in `.env.local` locale + Env di Vercel; MAI committate)
