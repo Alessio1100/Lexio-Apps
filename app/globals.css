@@ -642,6 +642,14 @@ svg { display: block; }
 /* coppia di KPI affiancati (mobile: 2 colonne; desktop: metà riga) */
 .kpirow { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
+/* Colonna con i due grafici (spesa giornaliera + spese per mese).
+   Mobile: impilati con altezza fissa. Desktop (vedi media query): la colonna
+   si allunga fino all'altezza della torta e i due grafici si dividono a metà. */
+.chartstack { display: flex; flex-direction: column; gap: 14px; }
+.chartcard { display: flex; flex-direction: column; }
+.chartbox { height: 210px; }
+.chartbox-tall { height: 240px; }
+
 /* ===================== DESKTOP >= 900px ===================== */
 @media (min-width: 900px) {
   .appnav {
@@ -707,13 +715,21 @@ svg { display: block; }
   /* Le due coppie di KPI diventano una riga di 4; la torta scende sotto.
      L'ordine desktop differisce dal DOM (che è l'ordine mobile) via `order`. */
   .dash > .kpirow { grid-column: span 6; order: 0; gap: 14px; }
-  .dash > .pos-pie { order: 1; }        /* torta (span-5) sotto i 4 KPI */
-  .dash > .pos-trend { order: 1; }      /* spesa giornaliera (span-7) accanto */
+  /* Torta (span-5) e colonna grafici (span-7) affiancate: entrambe si allungano
+     alla stessa altezza (quella della torta, che cresce con le categorie). */
+  .dash > .pos-pie { order: 1; align-self: stretch; }
+  .dash > .pos-charts { order: 1; align-self: stretch; }
   .dash > .pos-spend { order: 2; }      /* Dove vanno i soldi */
   .dash > .pos-5030 { order: 2; }       /* 50/30/20 */
-  .dash > .pos-months { order: 3; }     /* Istogramma mensile (span-12) */
-  .dash > .pos-insights { order: 4; }   /* Cosa dicono i dati */
-  .dash > .pos-bank { order: 5; }       /* Uscite per banca (span-12) in fondo */
+  .dash > .pos-insights { order: 3; }   /* Cosa dicono i dati */
+  .dash > .pos-bank { order: 4; }       /* Uscite per banca (span-12) in fondo */
+
+  /* La colonna grafici riempie la cella (allungata come la torta); i due
+     grafici si dividono l'altezza a metà, e ogni grafico riempie la sua card. */
+  .pos-charts { gap: 16px; }
+  .pos-charts .chartcard { flex: 1 1 0; min-height: 0; }
+  .pos-charts .chartbox,
+  .pos-charts .chartbox-tall { flex: 1 1 0; min-height: 0; height: auto; }
 
   .span-4 { grid-column: span 4; }
   .span-5 { grid-column: span 5; }

@@ -72,19 +72,21 @@ export default function DashboardView({ stats, daily, monthly, insights, currenc
         </div>
       </div>
 
-      {/* ---- Andamento ---- */}
-      <div className="card span-7 pos-trend">
-        <div className="card-title"><Activity size={15} /> Spesa giornaliera</div>
-        <SpendTrend daily={daily} currency={currency} />
-      </div>
-
-      {/* ---- Istogramma spese per mese (anno in corso) ---- */}
-      {monthly && monthly.length > 0 && (
-        <div className="card span-12 pos-months">
-          <div className="card-title"><BarChart3 size={15} /> Spese per mese · anno in corso</div>
-          <MonthlyBars data={monthly} currency={currency} />
+      {/* ---- Grafici affiancati alla torta (desktop): spesa giornaliera + spese per mese.
+             Su desktop la colonna si allunga fino all'altezza della torta e i due
+             grafici si dividono l'altezza a metà dinamicamente. ---- */}
+      <div className="chartstack pos-charts span-7">
+        <div className="card chartcard pos-trend">
+          <div className="card-title"><Activity size={15} /> Spesa giornaliera</div>
+          <div className="chartbox"><SpendTrend daily={daily} currency={currency} /></div>
         </div>
-      )}
+        {monthly && monthly.length > 0 && (
+          <div className="card chartcard pos-months">
+            <div className="card-title"><BarChart3 size={15} /> Spese per mese · anno in corso</div>
+            <div className="chartbox chartbox-tall"><MonthlyBars data={monthly} currency={currency} /></div>
+          </div>
+        )}
+      </div>
 
       {/* ---- Insight ---- */}
       {insights.length > 0 && (
@@ -193,7 +195,7 @@ function SpendTrend({ daily, currency }) {
     return <div className="empty" style={{ padding: "30px 10px" }}>Dati insufficienti per l'andamento.</div>;
   }
   return (
-    <div style={{ width: "100%", height: 210 }}>
+    <div style={{ width: "100%", height: "100%" }}>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={daily} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
           <defs>
@@ -230,7 +232,7 @@ function MonthlyBars({ data, currency }) {
     return <div className="empty" style={{ padding: "30px 10px" }}>Nessuna spesa registrata quest'anno.</div>;
   }
   return (
-    <div style={{ width: "100%", height: 240 }}>
+    <div style={{ width: "100%", height: "100%" }}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
           <XAxis dataKey="month" tick={{ fill: "var(--muted-2)", fontSize: 11 }} axisLine={false} tickLine={false} />
