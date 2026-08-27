@@ -9,6 +9,7 @@ import { categorize } from "../../../lib/categorize";
 import { detectTransferIds, ensureTransferCategory } from "../../../lib/transfers";
 import { idsToMarkFixed } from "../../../lib/fixed";
 import { learnedAssignments } from "../../../lib/learn";
+import { autoClassify } from "../../../lib/autoclassify";
 
 export const maxDuration = 60;
 
@@ -194,7 +195,18 @@ async function syncUser(admin, userId, { force = false, psu = null } = {}) {
     errors.push({ step: "learned", message: e.message });
   }
 
-  return { inserted, errors, skipped };
+  // classifica con Gemini le transazioni ancora senza categoria (category_source='ai',
+  // in attesa di approvazione in Impostazioni). Non blocca il sync se Gemini fallisce.
+  let aiClassified = 0;
+  try {
+    const r = await autoClassify(admin, userId, { max: 25 });
+    aiClassified = r.classified || 0;
+    if (r.error) errors.push({ step: "ai", message: r.error });
+  } catch (e) {
+    errors.push({ step: "ai", message: e.message });
+  }
+
+  return { inserted, errors, skipped, aiClassified };
 }
 
 export async function POST(request) {

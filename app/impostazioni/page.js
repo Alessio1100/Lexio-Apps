@@ -7,6 +7,7 @@ import { getCache, setCache, clearCache } from "../../lib/cache";
 import { createClient } from "../../lib/supabase/client";
 import { PERIODS, PERIOD_LABELS } from "../../lib/periods";
 import { formatMoney, formatDateShort } from "../../lib/format";
+import { CatIcon } from "../../lib/icons";
 
 export default function ImpostazioniPage() {
   const router = useRouter();
@@ -16,6 +17,8 @@ export default function ImpostazioniPage() {
   const [syncing, setSyncing] = useState(false);
   const [classifying, setClassifying] = useState(false);
   const [classifyResults, setClassifyResults] = useState([]);
+  const [aiPending, setAiPending] = useState([]); // classificate da Gemini, da approvare
+  const [approving, setApproving] = useState(false);
   const [picker, setPicker] = useState(null); // lista istituzioni
   const [pickerLoading, setPickerLoading] = useState(false);
 
@@ -29,6 +32,13 @@ export default function ImpostazioniPage() {
       .catch(() => {});
   }
 
+  function loadAiPending() {
+    api
+      .get("/api/classify/ai-pending")
+      .then((d) => setAiPending(d.transactions || []))
+      .catch(() => {});
+  }
+
   useEffect(() => {
     api
       .get("/api/settings")
@@ -38,12 +48,30 @@ export default function ImpostazioniPage() {
       })
       .catch(() => {});
     loadConnections();
+    loadAiPending();
+    // il sync in background (SessionSync) può aver classificato con Gemini → aggiorna la lista
+    const onSynced = () => loadAiPending();
+    window.addEventListener("tx-synced", onSynced);
     // messaggi dal redirect di consenso bancario
     const p = new URLSearchParams(window.location.search);
     if (p.get("connected")) setMsg({ type: "ok", text: "Banca collegata con successo!" });
     if (p.get("error"))
       setMsg({ type: "err", text: `Collegamento non riuscito: ${p.get("error")}` });
+    return () => window.removeEventListener("tx-synced", onSynced);
   }, []);
+
+  async function approveAi(ids) {
+    setApproving(true);
+    try {
+      await api.post("/api/classify/approve", ids ? { ids } : {});
+      clearCache("/api/transactions");
+      loadAiPending();
+    } catch (e) {
+      setMsg({ type: "err", text: e.message });
+    } finally {
+      setApproving(false);
+    }
+  }
 
   async function patchSettings(patch) {
     const next = { ...settings, ...patch };
@@ -99,12 +127,14 @@ export default function ImpostazioniPage() {
           text: `${r.inserted} nuove transazioni. Attenzione: ${lines}`,
         });
       } else {
+        const aiNote = r.aiClassified > 0 ? ` · ${r.aiClassified} classificate da Gemini (da approvare)` : "";
         setMsg({
           type: "ok",
-          text: `Sincronizzazione completata: ${r.inserted} nuove transazioni.`,
+          text: `Sincronizzazione completata: ${r.inserted} nuove transazioni${aiNote}.`,
         });
       }
       loadConnections();
+      loadAiPending();
     } catch (e) {
       setMsg({ type: "err", text: e.message });
     } finally {
@@ -389,6 +419,70 @@ export default function ImpostazioniPage() {
                   </div>
                 );
               })}
+            </div>
+          </div>
+        )}
+
+        {aiPending.length > 0 && (
+          <div style={{ marginTop: 18 }}>
+            <div className="dayhead" style={{ marginBottom: 8 }}>
+              <span>In attesa di approvazione · {aiPending.length}</span>
+              <button
+                className="btn secondary"
+                style={{ padding: "5px 10px", fontSize: 12.5, textTransform: "none" }}
+                onClick={() => approveAi(null)}
+                disabled={approving}
+              >
+                Approva tutte
+              </button>
+            </div>
+            <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 10 }}>
+              Classificate automaticamente da Gemini. Le vedi già nelle Spese; approva se
+              vanno bene, oppure correggile a mano dalla pagina Spese.
+            </div>
+            <div style={{ maxHeight: 360, overflowY: "auto" }}>
+              {aiPending.map((t) => (
+                <div
+                  key={t.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 9,
+                    padding: "8px 0",
+                    borderBottom: "1px solid var(--border)",
+                    fontSize: 13,
+                  }}
+                >
+                  <span
+                    className="txicon"
+                    style={{
+                      background: `${t.color || "#71717a"}22`,
+                      color: t.color || "#71717a",
+                      width: 30,
+                      height: 30,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <CatIcon name={t.category} icon={t.icon} size={16} />
+                  </span>
+                  <span style={{ flex: 1, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {t.name}
+                    <span style={{ color: "var(--muted)", marginLeft: 6 }}>{formatDateShort(t.date)}</span>
+                    <span style={{ color: "var(--muted)", marginLeft: 6 }}>· {t.category}</span>
+                  </span>
+                  <span style={{ color: Number(t.amount) >= 0 ? "var(--green)" : "var(--text)", flexShrink: 0 }}>
+                    {formatMoney(t.amount, settings.currency)}
+                  </span>
+                  <button
+                    className="btn secondary"
+                    style={{ padding: "5px 10px", fontSize: 12.5, flexShrink: 0 }}
+                    onClick={() => approveAi([t.id])}
+                    disabled={approving}
+                  >
+                    Approva
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
         )}
