@@ -72,7 +72,9 @@ const SYNC_COOLDOWN_MS = 6 * 3600 * 1000;
 
 // Sincronizza tutte le connessioni "linked" di un utente.
 // force=true (sync manuale) ignora il cooldown; force=false (app-open/cron) lo rispetta.
-async function syncUser(admin, userId, { force = false } = {}) {
+// psu = { ip, userAgent }: header "cliente presente" per il sync manuale → bypassa il
+// limite giornaliero degli accessi non presidiati (es. BuddyBank/UniCredit).
+async function syncUser(admin, userId, { force = false, psu = null } = {}) {
   const [{ data: connections }, { data: rules }] = await Promise.all([
     admin
       .from("bank_connections")
@@ -107,6 +109,7 @@ async function syncUser(admin, userId, { force = false } = {}) {
         const resp = await getAccountTransactions(conn.gc_account_id, {
           dateFrom,
           continuationKey,
+          psu,
         });
         for (const raw of resp.transactions || []) {
           const norm = normalizeTransaction(raw, {
@@ -224,7 +227,16 @@ export async function POST(request) {
   } catch {}
   const force = !body.background;
 
-  const result = await syncUser(admin, user.id, { force });
+  // Sync manuale ("Sync ora"): richiesta "presidiata" con header PSU (IP + user-agent
+  // reali dell'utente) → bypassa il limite giornaliero degli accessi non presidiati.
+  const ip =
+    (request.headers.get("x-forwarded-for") || "").split(",")[0].trim() ||
+    request.headers.get("x-real-ip") ||
+    null;
+  const userAgent = request.headers.get("user-agent") || null;
+  const psu = force && ip && userAgent ? { ip, userAgent } : null;
+
+  const result = await syncUser(admin, user.id, { force, psu });
   return NextResponse.json({ ok: true, ...result });
 }
 
