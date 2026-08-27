@@ -88,8 +88,10 @@ async function syncUser(admin, userId, { force = false, psu = null } = {}) {
   let inserted = 0;
   const errors = [];
   let skipped = 0;
-  // recupera 90 giorni di storico (dedup gestita dall'upsert)
-  const dateFrom = new Date(Date.now() - 90 * 24 * 3600 * 1000)
+  // Storico: 88 giorni (dedup gestita dall'upsert). NON 90 tondi: alcune banche
+  // (es. BuddyBank/UniCredit) applicano il limite PSD2 "storico < 90 giorni" e
+  // rifiutano date_from di esattamente 90 giorni fa (422 WRONG_TRANSACTIONS_PERIOD).
+  const dateFrom = new Date(Date.now() - 88 * 24 * 3600 * 1000)
     .toISOString()
     .slice(0, 10);
 
