@@ -121,7 +121,7 @@ export default function CategoryPie({ data, currency, total, period, refDate }) 
           <div style={{ fontSize: 12, color: "var(--muted)", display: "flex", alignItems: "center", gap: 5, justifyContent: "center" }}>
             {focus ? (
               <>
-                <CatIcon name={focus.name} size={13} color={focus.color} />
+                <CatIcon name={focus.name} icon={focus.icon} size={13} color={focus.color} />
                 {focus.name}
               </>
             ) : (
@@ -154,7 +154,7 @@ export default function CategoryPie({ data, currency, total, period, refDate }) 
               style={{ opacity: active === -1 || active === i ? 1 : 0.5, cursor: "pointer" }}
             >
               <span className="leg-ic" style={{ background: `${d.color}22`, color: d.color }}>
-                <CatIcon name={d.name} size={15} />
+                <CatIcon name={d.name} icon={d.icon} size={15} />
               </span>
               <span className="legname">{d.name}</span>
               <span className="legval money">{formatMoney(d.value, currency)}</span>

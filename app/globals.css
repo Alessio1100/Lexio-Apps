@@ -650,6 +650,32 @@ svg { display: block; }
 .chartbox { height: 210px; }
 .chartbox-tall { height: 240px; }
 
+/* Selettore icone (pack Lucide) nel form categoria */
+.iconpicker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(42px, 1fr));
+  gap: 8px;
+  max-height: 208px;
+  overflow-y: auto;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.iconopt {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--muted);
+  cursor: pointer;
+  transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
+}
+.iconopt:hover { color: var(--text); border-color: var(--muted-2); }
+.iconopt.active { background: var(--brand-dim); border-width: 2px; }
+
 /* ===================== DESKTOP >= 900px ===================== */
 @media (min-width: 900px) {
   .appnav {

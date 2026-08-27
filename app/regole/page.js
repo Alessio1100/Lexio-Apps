@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
 import { getCache, setCache, clearCache } from "../../lib/cache";
+import { CatIcon, iconGlyph } from "../../lib/icons";
 
 const FIELDS = [
   { value: "description", label: "Descrizione" },
@@ -154,7 +155,7 @@ export default function RegolePage() {
                     color: cat?.color || "#71717a",
                   }}
                 >
-                  {cat?.icon || "⚙️"}
+                  {cat ? <CatIcon name={cat.name} icon={cat.icon} size={18} /> : "⚙️"}
                 </span>
                 <span className="txbody">
                   <span className="txname">
@@ -257,7 +258,7 @@ function RuleForm({ initial, cats, onClose, onSave }) {
               <option value="">— scegli —</option>
               {cats.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.icon} {c.name}
+                  {iconGlyph(c.icon, c.name)} {c.name}
                 </option>
               ))}
             </select>

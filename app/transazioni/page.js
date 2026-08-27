@@ -7,7 +7,7 @@ import { getCache, setCache, clearCache } from "../../lib/cache";
 import { getPeriodRange, toDateStr } from "../../lib/periods";
 import { formatMoney, formatDateLong } from "../../lib/format";
 import { catColor } from "../../lib/colors";
-import { CatIcon } from "../../lib/icons";
+import { CatIcon, iconGlyph } from "../../lib/icons";
 import { Plus, Pin, ListFilter } from "lucide-react";
 
 // Stato iniziale da cache (vedi dashboard). Salta l'init se arrivo con parametri
@@ -257,7 +257,7 @@ export default function TransazioniPage() {
             <option value="none">Non categorizzate</option>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.icon} {c.name}
+                {iconGlyph(c.icon, c.name)} {c.name}
               </option>
             ))}
           </select>
@@ -404,7 +404,7 @@ function AddExpenseModal({ categories, onClose, onSave }) {
             <option value="">— nessuna —</option>
             {cats.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.icon} {c.name}
+                {iconGlyph(c.icon, c.name)} {c.name}
               </option>
             ))}
           </select>
@@ -437,7 +437,7 @@ function TxRow({ tx, currency, onClick }) {
         className="txicon"
         style={{ background: `${color}22`, color }}
       >
-        <CatIcon name={cat?.name} size={19} />
+        <CatIcon name={cat?.name} icon={cat?.icon} size={19} />
       </span>
       <span className="txbody">
         <span className="txname" style={{ display: "flex", alignItems: "center", gap: 5 }}>
@@ -509,7 +509,7 @@ function CategoryModal({ tx, categories, currency, onClose, onAssign, onToggleFi
               }}
               onClick={() => onAssign(c.id, false)}
             >
-              <CatIcon name={c.name} size={16} color={catColor(c)} style={{ marginRight: 8, flexShrink: 0 }} />
+              <CatIcon name={c.name} icon={c.icon} size={16} color={catColor(c)} style={{ marginRight: 8, flexShrink: 0 }} />
               {c.name}
             </button>
           ))}

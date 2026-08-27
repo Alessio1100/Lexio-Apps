@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
 import { getCache, setCache, clearCache } from "../../lib/cache";
+import { CatIcon, ICON_LIBRARY, emojiIconValue } from "../../lib/icons";
 
 const PALETTE = [
   "#22c55e", "#f97316", "#eab308", "#3b82f6", "#ec4899",
@@ -12,7 +13,7 @@ const PALETTE = [
 
 const EMPTY = {
   name: "",
-  icon: "🏷️",
+  icon: "Tag",
   color: "#6366f1",
   is_income: false,
   bucket: "wants",
@@ -140,7 +141,7 @@ function Section({ title, hint, items, onEdit, onDelete }) {
       {items.map((c) => (
         <div className="txrow" style={{ borderLeftColor: c.color }} key={c.id}>
           <span className="txicon" style={{ background: `${c.color}22`, color: c.color }}>
-            {c.icon}
+            <CatIcon name={c.name} icon={c.icon} size={18} />
           </span>
           <span className="txbody">
             <span className="txname">{c.name}</span>
@@ -169,6 +170,13 @@ function CategoryForm({ initial, onClose, onSave }) {
   const [form, setForm] = useState(initial);
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
+  // Modalità icona: pack (griglia Lucide) o emoji. Dedotta dal valore iniziale.
+  const startsEmoji = !!initial.icon && (initial.icon.startsWith("emoji:") || !ICON_LIBRARY[initial.icon]);
+  const [iconMode, setIconMode] = useState(startsEmoji ? "emoji" : "pack");
+  const emojiValue = form.icon?.startsWith("emoji:")
+    ? form.icon.slice(6)
+    : (form.icon && !ICON_LIBRARY[form.icon] ? form.icon : "");
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -185,13 +193,52 @@ function CategoryForm({ initial, onClose, onSave }) {
         </div>
 
         <div className="field">
-          <label>Emoji / icona</label>
-          <input
-            className="input"
-            value={form.icon}
-            onChange={(e) => set("icon", e.target.value)}
-            maxLength={4}
-          />
+          <label>Icona</label>
+          <div className="chiprow" style={{ marginBottom: 10 }}>
+            <button
+              className={`chip ${iconMode === "pack" ? "active" : ""}`}
+              onClick={() => {
+                setIconMode("pack");
+                if (!ICON_LIBRARY[form.icon]) set("icon", "Tag");
+              }}
+            >
+              Dal pack
+            </button>
+            <button
+              className={`chip ${iconMode === "emoji" ? "active" : ""}`}
+              onClick={() => {
+                setIconMode("emoji");
+                set("icon", emojiIconValue(emojiValue || ""));
+              }}
+            >
+              Emoji
+            </button>
+          </div>
+
+          {iconMode === "pack" ? (
+            <div className="iconpicker">
+              {Object.entries(ICON_LIBRARY).map(([key, Ic]) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`iconopt ${form.icon === key ? "active" : ""}`}
+                  onClick={() => set("icon", key)}
+                  aria-label={key}
+                  style={form.icon === key ? { borderColor: form.color, color: form.color } : undefined}
+                >
+                  <Ic size={20} strokeWidth={2} />
+                </button>
+              ))}
+            </div>
+          ) : (
+            <input
+              className="input"
+              value={emojiValue}
+              onChange={(e) => set("icon", emojiIconValue(e.target.value))}
+              maxLength={4}
+              placeholder="Es. 🍔"
+            />
+          )}
         </div>
 
         <div className="field">

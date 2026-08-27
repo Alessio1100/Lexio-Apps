@@ -260,7 +260,7 @@ function TopCategories({ pie, total, currency }) {
           <div key={i}>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 2 }}>
               <span style={{ display: "flex", alignItems: "center", gap: 7, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                <CatIcon name={c.name} size={15} color={color} />
+                <CatIcon name={c.name} icon={c.icon} size={15} color={color} />
                 {c.name}
               </span>
               <span className="money" style={{ fontWeight: 700 }}>
