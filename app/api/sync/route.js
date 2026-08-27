@@ -64,8 +64,15 @@ async function markTransfers(admin, userId) {
   }
 }
 
+// Cooldown per i sync automatici (app-open + cron): alcune banche (es. BuddyBank/
+// UniCredit) applicano un limite PSD2 di pochi accessi "non presidiati" al giorno.
+// Sincronizzando a ogni apertura si esaurisce il quota → 429 e transazioni recenti
+// mai importate. Con il cooldown restiamo entro il limite; "Sync ora" forza comunque.
+const SYNC_COOLDOWN_MS = 6 * 3600 * 1000;
+
 // Sincronizza tutte le connessioni "linked" di un utente.
-async function syncUser(admin, userId) {
+// force=true (sync manuale) ignora il cooldown; force=false (app-open/cron) lo rispetta.
+async function syncUser(admin, userId, { force = false } = {}) {
   const [{ data: connections }, { data: rules }] = await Promise.all([
     admin
       .from("bank_connections")
@@ -78,12 +85,21 @@ async function syncUser(admin, userId) {
 
   let inserted = 0;
   const errors = [];
+  let skipped = 0;
   // recupera 90 giorni di storico (dedup gestita dall'upsert)
   const dateFrom = new Date(Date.now() - 90 * 24 * 3600 * 1000)
     .toISOString()
     .slice(0, 10);
 
   for (const conn of connections || []) {
+    // throttle dei sync automatici per non esaurire il rate limit della banca
+    if (!force && conn.last_synced_at) {
+      const age = Date.now() - new Date(conn.last_synced_at).getTime();
+      if (age < SYNC_COOLDOWN_MS) {
+        skipped++;
+        continue;
+      }
+    }
     try {
       let continuationKey = null;
       const rows = [];
@@ -137,7 +153,18 @@ async function syncUser(admin, userId) {
           .update({ status: "expired" })
           .eq("id", conn.id);
       }
-      errors.push({ connection: conn.id, message: e.message });
+      const message =
+        e.status === 429
+          ? "Limite di accessi giornaliero della banca raggiunto: riprova più tardi."
+          : expired
+          ? "Consenso scaduto: ricollega la banca."
+          : e.message;
+      errors.push({
+        connection: conn.id,
+        institution: conn.institution_name,
+        status: e.status || null,
+        message,
+      });
     }
   }
 
@@ -162,7 +189,7 @@ async function syncUser(admin, userId) {
     errors.push({ step: "learned", message: e.message });
   }
 
-  return { inserted, errors };
+  return { inserted, errors, skipped };
 }
 
 export async function POST(request) {
@@ -180,7 +207,7 @@ export async function POST(request) {
     const userIds = [...new Set((conns || []).map((c) => c.user_id))];
     let total = 0;
     for (const uid of userIds) {
-      const r = await syncUser(admin, uid);
+      const r = await syncUser(admin, uid, { force: false });
       total += r.inserted;
     }
     return NextResponse.json({ ok: true, users: userIds.length, inserted: total });
@@ -189,7 +216,15 @@ export async function POST(request) {
   const { user } = await getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const result = await syncUser(admin, user.id);
+  // background:true (sync automatico all'apertura) rispetta il cooldown;
+  // il pulsante "Sync ora" non lo manda → force.
+  let body = {};
+  try {
+    body = await request.json();
+  } catch {}
+  const force = !body.background;
+
+  const result = await syncUser(admin, user.id, { force });
   return NextResponse.json({ ok: true, ...result });
 }
 

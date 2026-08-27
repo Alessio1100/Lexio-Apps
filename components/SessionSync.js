@@ -18,7 +18,7 @@ export default function SessionSync() {
     if (!pathname || PUBLIC.some((p) => pathname.startsWith(p))) return;
     started = true;
     api
-      .post("/api/sync")
+      .post("/api/sync", { background: true })
       .then((r) => {
         if (r && r.inserted > 0) {
           clearCache("/api/transactions");

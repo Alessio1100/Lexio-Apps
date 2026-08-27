@@ -90,10 +90,20 @@ export default function ImpostazioniPage() {
       const r = await api.post("/api/sync");
       clearCache("/api/transactions");
       window.dispatchEvent(new CustomEvent("tx-synced", { detail: r }));
-      setMsg({
-        type: "ok",
-        text: `Sincronizzazione completata: ${r.inserted} nuove transazioni.`,
-      });
+      if (r.errors && r.errors.length) {
+        const lines = r.errors
+          .map((e) => `${e.institution || "Banca"} — ${e.message}`)
+          .join("; ");
+        setMsg({
+          type: "err",
+          text: `${r.inserted} nuove transazioni. Attenzione: ${lines}`,
+        });
+      } else {
+        setMsg({
+          type: "ok",
+          text: `Sincronizzazione completata: ${r.inserted} nuove transazioni.`,
+        });
+      }
       loadConnections();
     } catch (e) {
       setMsg({ type: "err", text: e.message });
@@ -243,6 +253,11 @@ export default function ImpostazioniPage() {
                   {c.status === "linked" ? "attivo" : c.status}
                   {c.consent_expires_at &&
                     ` · scade ${new Date(c.consent_expires_at).toLocaleDateString("it-IT")}`}
+                </div>
+                <div style={{ fontSize: 11.5, color: "var(--muted-2)" }}>
+                  {c.last_synced_at
+                    ? `ultimo sync ${new Date(c.last_synced_at).toLocaleString("it-IT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}`
+                    : "mai sincronizzato"}
                 </div>
               </div>
               <button
