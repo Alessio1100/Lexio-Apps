@@ -33,7 +33,7 @@ async function markLearned(admin, userId) {
 async function markFixed(admin, userId) {
   const { data: txs } = await admin
     .from("transactions")
-    .select("id,merchant_name,is_fixed")
+    .select("id,merchant_name,amount,is_fixed")
     .eq("user_id", userId);
   const ids = idsToMarkFixed(txs || []);
   for (const id of ids) {

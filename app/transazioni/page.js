@@ -169,10 +169,12 @@ export default function TransazioniPage() {
     try {
       await api.patch(`/api/transactions/${editing.id}`, { is_fixed: next });
       const merchant = (editing.merchant_name || "").toLowerCase().trim();
+      const amountCents = Math.round(Number(editing.amount || 0) * 100);
       setTxs((prev) =>
         prev.map((t) => {
           const same = merchant
-            ? (t.merchant_name || "").toLowerCase().trim() === merchant
+            ? (t.merchant_name || "").toLowerCase().trim() === merchant &&
+              Math.round(Number(t.amount || 0) * 100) === amountCents
             : t.id === editing.id;
           return same ? { ...t, is_fixed: next } : t;
         })

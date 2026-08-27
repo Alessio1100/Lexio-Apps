@@ -73,10 +73,10 @@ export async function POST() {
     })
   );
 
-  // propaga le spese fisse alle ricorrenze della stessa controparte
+  // propaga le spese fisse alle ricorrenze della stessa controparte + stesso importo
   const { data: allTx } = await supabase
     .from("transactions")
-    .select("id,merchant_name,is_fixed")
+    .select("id,merchant_name,amount,is_fixed")
     .eq("user_id", user.id);
   const fixedIds = idsToMarkFixed(allTx || []);
   await Promise.all(
